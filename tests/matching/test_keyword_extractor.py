@@ -18,6 +18,10 @@ def extractor() -> KeywordExtractor:
                     {"id": "cpp", "name": "C++", "category": "language"},
                     {"id": "csharp", "name": "C#", "category": "language"},
                     {"id": "ci-cd", "name": "CI/CD", "category": "devops", "synonyms": ["integração contínua"]},
+                    {"id": "css", "name": "CSS", "category": "language"},
+                    {"id": "tailwind", "name": "Tailwind CSS", "category": "frontend"},
+                    {"id": "github", "name": "GitHub", "category": "tool"},
+                    {"id": "github-actions", "name": "GitHub Actions", "category": "devops"},
                 ]
             }
         )
@@ -45,6 +49,11 @@ class TestKeywordExtractor:
 
     def test_does_not_find_terms_inside_words(self, extractor):
         assert extractor.extract("Pythonic, ecossistema jsx e nodes") == {}
+
+    def test_counts_overlapping_names_only_once_preferring_the_longest(self, extractor):
+        found = extractor.extract("Tailwind CSS, GitHub Actions e CSS puro no GitHub")
+
+        assert found == {"tailwind": 1, "github-actions": 1, "css": 1, "github": 1}
 
     def test_finds_terms_next_to_punctuation(self, extractor):
         assert extractor.extract("(Python), C/C++.") == {"python": 1, "c": 1, "cpp": 1}
