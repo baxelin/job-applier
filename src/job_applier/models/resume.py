@@ -29,6 +29,7 @@ class Contact(StrictModel):
     location: NonEmptyText
     linkedin_url: HttpUrl
     github_url: HttpUrl
+    website_url: HttpUrl | None = None
 
 
 class Summary(TaggedModel):

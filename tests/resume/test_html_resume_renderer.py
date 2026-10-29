@@ -45,6 +45,19 @@ class TestHtmlResumeRenderer:
         assert "Automação de rotinas com Python (en)" in html
         assert "Apr 2025 - Jul 2026" in html
 
+    def test_shows_website_only_when_defined(self, tailoring_resume, tailoring_glossary, resume_settings):
+        without_website = render(tailoring_resume, tailoring_glossary, resume_settings, Locale.PT)
+        resume = tailoring_resume.model_copy(
+            update={
+                "contact": tailoring_resume.contact.model_copy(update={"website_url": "https://pessoa.vercel.app"})
+            }
+        )
+
+        with_website = render(resume, tailoring_glossary, resume_settings, Locale.PT)
+
+        assert "Portfólio:" not in without_website
+        assert "<strong>Portfólio:</strong>" in with_website and ">pessoa.vercel.app</a>" in with_website
+
     def test_escapes_html_from_data(self, tailoring_resume, tailoring_glossary, resume_settings):
         resume = tailoring_resume.model_copy(
             update={"contact": tailoring_resume.contact.model_copy(update={"location": "<b>SP</b>"})}

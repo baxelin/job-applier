@@ -29,6 +29,7 @@
     { "id": "vite", "name": "Vite", "category": "frontend", "synonyms": [] },
     { "id": "jquery", "name": "jQuery", "category": "frontend", "synonyms": [] },
     { "id": "react-native", "name": "React Native", "category": "frontend", "synonyms": [] },
+    { "id": "pinia", "name": "Pinia", "category": "frontend", "synonyms": [] },
 
     { "id": "nodejs", "name": "Node.js", "category": "backend", "synonyms": ["node", "nodejs", "node js"] },
     { "id": "express", "name": "Express", "category": "backend", "synonyms": ["express.js", "expressjs"] },
@@ -54,6 +55,7 @@
     { "id": "redis", "name": "Redis", "category": "data", "synonyms": [] },
     { "id": "sqlite", "name": "SQLite", "category": "data", "synonyms": [] },
     { "id": "sqlalchemy", "name": "SQLAlchemy", "category": "data", "synonyms": [] },
+    { "id": "prisma", "name": "Prisma", "category": "data", "synonyms": ["prisma orm"] },
     { "id": "elasticsearch", "name": "Elasticsearch", "category": "data", "synonyms": ["elastic", "elk"] },
     { "id": "pandas", "name": "Pandas", "category": "data", "synonyms": [] },
     { "id": "power-bi", "name": "Power BI", "category": "data", "synonyms": ["powerbi"] },
@@ -90,6 +92,7 @@
 
     { "id": "pytest", "name": "pytest", "category": "testing", "synonyms": [] },
     { "id": "jest", "name": "Jest", "category": "testing", "synonyms": [] },
+    { "id": "vitest", "name": "Vitest", "category": "testing", "synonyms": [] },
     { "id": "cypress", "name": "Cypress", "category": "testing", "synonyms": [] },
     { "id": "selenium", "name": "Selenium", "category": "testing", "synonyms": [] },
     { "id": "playwright", "name": "Playwright", "category": "testing", "synonyms": [] },

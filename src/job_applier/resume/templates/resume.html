@@ -33,6 +33,9 @@
     <p><strong>{{ labels["email"] }}:</strong> <a href="mailto:{{ resume.contact.email }}">{{ resume.contact.email }}</a></p>
     <p><strong>LinkedIn:</strong> <a href="{{ resume.contact.linkedin_url }}">{{ display_url(resume.contact.linkedin_url) }}</a></p>
     <p><strong>GitHub:</strong> <a href="{{ resume.contact.github_url }}">{{ display_url(resume.contact.github_url) }}</a></p>
+    {% if resume.contact.website_url %}
+    <p><strong>{{ labels["website"] }}:</strong> <a href="{{ resume.contact.website_url }}">{{ display_url(resume.contact.website_url) }}</a></p>
+    {% endif %}
   </section>
 
   <h2>{{ labels["summary"] }}</h2>
