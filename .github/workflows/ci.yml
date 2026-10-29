@@ -22,6 +22,9 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
+      - name: Instalar bibliotecas do WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+
       - name: Instalar dependências
         run: pip install ".[dev]"
 

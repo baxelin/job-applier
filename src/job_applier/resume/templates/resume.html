@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="{{ resume.locale.value }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ resume.contact.full_name }}</title>
+  <style>
+    @font-face { font-family: "Lato"; src: url("fonts/Lato-Regular.ttf"); font-weight: 400; }
+    @font-face { font-family: "Lato"; src: url("fonts/Lato-Bold.ttf"); font-weight: 700; }
+
+    @page { size: A4; margin: 2.2cm 2.4cm 2cm 2.6cm; }
+
+    body { font-family: "Lato", sans-serif; font-size: 10.5pt; line-height: 1.25; color: #000; margin: 0; }
+    a { color: #1155cc; }
+    p { margin: 0; }
+
+    h1 { font-size: 24pt; margin: 0 0 12pt; }
+    h2 { font-size: 17pt; margin: 16pt 0 6pt; padding-bottom: 6pt; border-bottom: 1px solid #999; }
+
+    .entry { margin-top: 6pt; }
+    .entry-header { display: flex; justify-content: space-between; font-weight: 700; break-after: avoid; }
+    .entry-header .company { font-weight: 400; }
+    .entry ul { margin: 2pt 0 0; padding-left: 26pt; }
+
+    .additional p { margin-top: 2pt; }
+  </style>
+</head>
+<body>
+  <h1>{{ resume.contact.full_name | upper }}</h1>
+
+  <section class="contact">
+    <p><strong>{{ labels["location"] }}:</strong> {{ resume.contact.location }}</p>
+    <p><strong>{{ labels["phone"] }}:</strong> {{ resume.contact.phone }}</p>
+    <p><strong>{{ labels["email"] }}:</strong> <a href="mailto:{{ resume.contact.email }}">{{ resume.contact.email }}</a></p>
+    <p><strong>LinkedIn:</strong> <a href="{{ resume.contact.linkedin_url }}">{{ display_url(resume.contact.linkedin_url) }}</a></p>
+    <p><strong>GitHub:</strong> <a href="{{ resume.contact.github_url }}">{{ display_url(resume.contact.github_url) }}</a></p>
+  </section>
+
+  <h2>{{ labels["summary"] }}</h2>
+  <p>{{ localize(resume.summary.text) }}</p>
+
+  {% if resume.education %}
+  <h2>{{ labels["education"] }}</h2>
+  {% for education in resume.education %}
+  <div class="entry">
+    <div class="entry-header">
+      <span>{{ localize(education.degree) }}</span>
+      <span>{{ labels.period(education.period) }}</span>
+    </div>
+    <p>{{ education.institution }}</p>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <h2>{{ labels["experience"] }}</h2>
+  {% for item in resume.experiences %}
+  <div class="entry">
+    <div class="entry-header">
+      <span>{{ localize(item.experience.role) }} | <span class="company">{{ item.experience.company }}</span></span>
+      <span>{{ labels.period(item.experience.period) }}</span>
+    </div>
+    <ul>
+      {% for bullet in item.bullets %}
+      <li>{{ localize(bullet.text) }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+
+  {% if resume.projects %}
+  <h2>{{ labels["projects"] }}</h2>
+  {% for item in resume.projects %}
+  <div class="entry">
+    <div class="entry-header">
+      <span>{{ item.project.name }}{% if item.project.url %} | <a class="company" href="{{ item.project.url }}">{{ display_url(item.project.url) }}</a>{% endif %}</span>
+    </div>
+    <ul>
+      {% for bullet in item.bullets %}
+      <li>{{ localize(bullet.text) }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <h2>{{ labels["additional"] }}</h2>
+  <section class="additional">
+    {% if resume.skills %}
+    <p><strong>{{ labels["skills"] }}:</strong> {{ resume.skills | join(", ") }}.</p>
+    {% endif %}
+    {% if resume.languages %}
+    <p><strong>{{ labels["languages"] }}:</strong>
+      {% for language in resume.languages %}{{ localize(language.name) }} ({{ localize(language.level) }}){{ " | " if not loop.last }}{% endfor %}.</p>
+    {% endif %}
+    {% if resume.certifications %}
+    <p><strong>{{ labels["certifications"] }}:</strong>
+      {% for certification in resume.certifications %}{{ certification.name }}{% if certification.status == "in_progress" %} ({{ labels["in_progress"] }}){% endif %}{{ ", " if not loop.last }}{% endfor %}.</p>
+    {% endif %}
+  </section>
+</body>
+</html>
