@@ -6,6 +6,11 @@ from job_applier.config.json_model_loader import DataFileNotFoundError
 from job_applier.resume.pdf_exporter import PdfExportError
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
+from job_applier.storage.application_repository import SqliteApplicationRepository
+from job_applier.storage.application_tracker import ApplicationTracker
+from job_applier.storage.database import Database
+from job_applier.storage.excel_report_writer import ExcelReportWriter
+from job_applier.storage.unknown_question_repository import SqliteUnknownQuestionRepository
 
 
 class FakeBaseDataLoader:
@@ -37,12 +42,27 @@ def write_job(directory: Path) -> Path:
     return path
 
 
+def saved_applications(tmp_path: Path) -> SqliteApplicationRepository:
+    return SqliteApplicationRepository(Database(tmp_path / "data" / "job_applier.db"))
+
+
+def tracker(tmp_path: Path) -> ApplicationTracker:
+    database = Database(tmp_path / "data" / "job_applier.db")
+    return ApplicationTracker(
+        SqliteApplicationRepository(database),
+        SqliteUnknownQuestionRepository(database),
+        ExcelReportWriter(tmp_path / "data" / "candidaturas.xlsx", tmp_path),
+        project_root=tmp_path,
+    )
+
+
 def command(base_data_loader, tmp_path: Path, exporter) -> GenerateResumesCommand:
     return GenerateResumesCommand(
         base_data_loader,
         lambda base_data: ResumeGenerator(
             base_data, ResumeArchive(tmp_path / "cvs"), exporter=exporter, today=lambda: date(2026, 10, 29)
         ),
+        tracker(tmp_path),
     )
 
 
@@ -55,6 +75,23 @@ class TestGenerateResumesCommand:
         assert "[Empresa X] Dev Júnior" in output
         assert "Aderência: 100%" in output
         assert "2026-10-29_Empresa-X_Dev-Junior.pdf" in output
+
+    def test_records_job_in_database_and_spreadsheet(self, example_base_data, tmp_path, capsys):
+        exit_code = command(FakeBaseDataLoader(example_base_data), tmp_path, FakePdfExporter()).run([write_job(tmp_path)])
+
+        assert exit_code == 0
+        assert [item.company for item in saved_applications(tmp_path).list_all()] == ["Empresa X"]
+        assert (tmp_path / "data" / "candidaturas.xlsx").exists()
+        assert "Planilha atualizada" in capsys.readouterr().out
+
+    def test_locked_spreadsheet_keeps_data_and_only_warns(self, example_base_data, tmp_path, capsys):
+        (tmp_path / "data" / "candidaturas.xlsx").mkdir(parents=True)
+
+        exit_code = command(FakeBaseDataLoader(example_base_data), tmp_path, FakePdfExporter()).run([write_job(tmp_path)])
+
+        assert exit_code == 0
+        assert "próxima execução" in capsys.readouterr().err
+        assert len(saved_applications(tmp_path).list_all()) == 1
 
     def test_warns_about_support_roles(self, example_base_data, tmp_path, capsys):
         job = tmp_path / "suporte.txt"

@@ -8,6 +8,13 @@ class TestCommandLine:
         with pytest.raises(SystemExit):
             CommandLine().run(["cv"])
 
+    def test_planilha_command_creates_spreadsheet_from_empty_database(self, tmp_path, capsys):
+        exit_code = CommandLine(project_root=tmp_path).run(["planilha"])
+
+        assert exit_code == 0
+        assert (tmp_path / "data" / "candidaturas.xlsx").exists()
+        assert (tmp_path / "data" / "job_applier.db").exists()
+
     def test_cv_command_reports_missing_base_data(self, tmp_path, capsys):
         job = tmp_path / "vaga.txt"
         job.write_text("Empresa: X\nVaga: Y\n---\nPython", encoding="utf-8")
