@@ -123,7 +123,8 @@
     { "id": "scrum", "name": "Scrum", "category": "practice", "synonyms": [] },
     { "id": "kanban", "name": "Kanban", "category": "practice", "synonyms": [] },
     { "id": "automation", "name": "Automação", "name_en": "Automation", "category": "practice", "synonyms": ["automation", "automação de processos"] },
-    { "id": "ai", "name": "Inteligência Artificial", "name_en": "Artificial Intelligence", "category": "practice", "synonyms": ["ia", "ia generativa", "genai", "generative ai", "llm", "llms", "agentes de ia", "ai agents", "engenharia de prompts", "prompt engineering"] },
+    { "id": "ai", "name": "Inteligência Artificial", "name_en": "Artificial Intelligence", "category": "practice", "synonyms": ["ia", "ia generativa", "genai", "generative ai", "llm", "llms", "agentes de ia", "ai agents"] },
+    { "id": "prompt-engineering", "name": "Engenharia de Prompts", "name_en": "Prompt Engineering", "category": "practice", "synonyms": ["engenharia de prompt"] },
     { "id": "n8n", "name": "n8n", "category": "tool", "synonyms": [] },
     { "id": "web-scraping", "name": "Web Scraping", "category": "practice", "synonyms": ["scraping", "raspagem de dados"] },
 
