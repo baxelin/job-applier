@@ -1,5 +1,5 @@
 {
-  "daily_application_limit": 15,
+  "daily_application_limit": 1000,
   "delay_between_actions_seconds": { "minimum": 2, "maximum": 6 },
   "delay_between_applications_seconds": { "minimum": 60, "maximum": 180 },
   "long_pause": {
@@ -7,7 +7,7 @@
     "minutes": { "minimum": 10, "maximum": 25 }
   },
   "filters": {
-    "experience_levels": ["entry_level", "associate"],
+    "experience_levels": ["internship", "entry_level", "associate"],
     "workplace_types": ["remote", "hybrid", "on_site"],
     "forbidden_title_words": [
       "sênior", "senior", "sr", "sr.", "pleno", "pl",
@@ -20,11 +20,17 @@
   },
   "searches": [
     { "keywords": "Desenvolvedor Júnior", "location": "São Paulo, SP" },
+    { "keywords": "Estágio Desenvolvimento de Software", "location": "São Paulo, SP" },
     { "keywords": "Desenvolvedor Python Júnior", "location": "Brasil" },
     { "keywords": "Desenvolvedor Full Stack Júnior", "location": "Brasil" },
     { "keywords": "Desenvolvedor Front-end Júnior", "location": "Brasil" },
     { "keywords": "Junior Developer", "location": "Brasil" },
+    { "keywords": "Junior Developer", "location": "Portugal", "workplace_types": ["remote"] },
+    { "keywords": "Junior Software Developer", "location": "European Union", "workplace_types": ["remote"] },
+    { "keywords": "Junior Developer", "location": "Worldwide", "workplace_types": ["remote"] },
     { "keywords": "DevOps Júnior", "location": "Brasil" },
-    { "keywords": "Cloud Júnior", "location": "Brasil" }
+    { "keywords": "Estágio DevOps", "location": "São Paulo, SP" },
+    { "keywords": "Cloud Júnior", "location": "Brasil" },
+    { "keywords": "Junior DevOps Engineer", "location": "Worldwide", "workplace_types": ["remote"] }
   ]
 }
