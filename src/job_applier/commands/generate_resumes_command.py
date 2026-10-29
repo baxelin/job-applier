@@ -37,12 +37,13 @@ class GenerateResumesCommand:
     @staticmethod
     def _report(generated: GeneratedResume) -> str:
         focus = " + ".join(sorted(generated.analysis.focus))
-        return "\n".join(
-            [
-                f"[{generated.job.company}] {generated.job.title}",
-                f"  Idioma: {generated.analysis.locale} | Foco: {focus} | Aderência: {generated.fit.percentage}%",
-                f"  Tem: {', '.join(generated.fit.matched_terms) or '-'}",
-                f"  Falta: {', '.join(generated.fit.missing_terms) or '-'}",
-                f"  CV: {generated.path}",
-            ]
-        )
+        warning = "  ⚠ Parece vaga de SUPORTE (fora do alvo)" if generated.analysis.is_support_role else None
+        lines = [
+            f"[{generated.job.company}] {generated.job.title}",
+            warning,
+            f"  Idioma: {generated.analysis.locale} | Foco: {focus} | Aderência: {generated.fit.percentage}%",
+            f"  Tem: {', '.join(generated.fit.matched_terms) or '-'}",
+            f"  Falta: {', '.join(generated.fit.missing_terms) or '-'}",
+            f"  CV: {generated.path}",
+        ]
+        return "\n".join(line for line in lines if line)

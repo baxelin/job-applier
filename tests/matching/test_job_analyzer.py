@@ -41,6 +41,30 @@ class TestJobAnalyzer:
 
         assert analysis.focus == {Area.DEV, Area.DEVOPS}
 
+    def test_title_words_match_by_prefix(self, analyzer):
+        analysis = analyzer.analyze(job("Analista de Infraestrutura", "Venha trabalhar conosco."))
+
+        assert analysis.focus == {Area.DEVOPS}
+
+    def test_development_in_title_counts_as_dev(self, analyzer):
+        analysis = analyzer.analyze(job("Profissional de Desenvolvimento", "React, Java e CI/CD."))
+
+        assert analysis.focus == {Area.DEV}
+
+    def test_flags_support_role_disguised_as_infrastructure(self, analyzer):
+        analysis = analyzer.analyze(
+            job("Assistente de TI Infraestrutura", "Prestar suporte aos usuários via ITSM, hardware e redes.")
+        )
+
+        assert analysis.is_support_role
+
+    def test_development_job_mentioning_user_support_is_not_a_support_role(self, analyzer):
+        analysis = analyzer.analyze(
+            job("Analista de Sistemas", "Python, Java, C#, SQL Server e MySQL. Prestar suporte técnico aos usuários.")
+        )
+
+        assert not analysis.is_support_role
+
     def test_defaults_to_dev_when_nothing_is_recognized(self, analyzer):
         assert analyzer.analyze(job("Analista", "Vaga genérica.")).focus == {Area.DEV}
 

@@ -13,17 +13,22 @@ from job_applier.models.job_description import JobDescription
 class JobAnalyzer:
     """Transforma a descrição de uma vaga em uma JobAnalysis.
 
-    O foco (dev, devops ou ambos) vem das categorias dos termos encontrados, com bônus para
-    palavras do título. Se as duas áreas tiverem pesos próximos, o foco é misto.
+    Cada área (dev, devops, suporte) recebe uma pontuação pelas categorias dos termos encontrados,
+    com bônus para palavras do título. O foco é dev, devops ou ambos (quando os pesos são próximos);
+    a vaga é marcada como de suporte quando o suporte pesa mais que dev e devops juntos.
     """
 
     _DEV_CATEGORIES = frozenset(
         {TermCategory.LANGUAGE, TermCategory.FRONTEND, TermCategory.BACKEND, TermCategory.DATA, TermCategory.TESTING}
     )
     _DEVOPS_CATEGORIES = frozenset({TermCategory.DEVOPS, TermCategory.CLOUD})
-    _DEV_TITLE_WORDS = ("desenvolvedor", "desenvolvedora", "developer", "programador", "programadora",
-                        "software", "front", "back", "full", "web", "mobile")
+    _SUPPORT_CATEGORIES = frozenset({TermCategory.SUPPORT})
+    _DEV_TITLE_WORDS = ("desenvolvedor", "desenvolvedora", "desenvolvimento", "developer", "programador",
+                        "programadora", "software", "front", "back", "full", "web", "mobile")
     _DEVOPS_TITLE_WORDS = ("devops", "sre", "cloud", "infra", "platform", "plataforma", "site reliability")
+    _SUPPORT_TITLE_WORDS = ("suporte", "support", "help desk", "helpdesk", "service desk", "it operations",
+                            "operacoes de ti", "assistente de ti", "tecnico de ti", "tecnico de informatica",
+                            "field service", "n1", "n2")
     _TITLE_BONUS = 5
     _SHARED_FOCUS_RATIO = 0.5
 
@@ -42,26 +47,29 @@ class JobAnalyzer:
     def analyze(self, job: JobDescription) -> JobAnalysis:
         occurrences = self._extractor.extract(f"{job.title}\n{job.text}")
         weights = {term_id: min(count, self._keyword_occurrence_cap) for term_id, count in occurrences.items()}
+        dev = self._area_score(job.title, weights, self._DEV_CATEGORIES, self._DEV_TITLE_WORDS)
+        devops = self._area_score(job.title, weights, self._DEVOPS_CATEGORIES, self._DEVOPS_TITLE_WORDS)
+        support = self._area_score(job.title, weights, self._SUPPORT_CATEGORIES, self._SUPPORT_TITLE_WORDS)
+
         return JobAnalysis(
             term_weights=weights,
-            focus=self._focus(job.title, weights),
+            focus=self._focus(dev, devops),
             locale=self._language_detector.detect(job.text),
+            is_support_role=support > dev + devops,
         )
 
-    def _focus(self, title: str, weights: Mapping[str, int]) -> frozenset[Area]:
-        dev = self._category_score(weights, self._DEV_CATEGORIES) + self._title_bonus(title, self._DEV_TITLE_WORDS)
-        devops = self._category_score(weights, self._DEVOPS_CATEGORIES) + self._title_bonus(
-            title, self._DEVOPS_TITLE_WORDS
-        )
-
+    def _focus(self, dev: int, devops: int) -> frozenset[Area]:
         if dev == devops == 0:
             return frozenset({Area.DEV})
         if min(dev, devops) >= self._SHARED_FOCUS_RATIO * max(dev, devops):
             return frozenset({Area.DEV, Area.DEVOPS})
         return frozenset({Area.DEV if dev > devops else Area.DEVOPS})
 
-    def _category_score(self, weights: Mapping[str, int], categories: frozenset[TermCategory]) -> int:
-        return sum(weight for term_id, weight in weights.items() if self._categories[term_id] in categories)
+    def _area_score(
+        self, title: str, weights: Mapping[str, int], categories: frozenset[TermCategory], title_words: tuple[str, ...]
+    ) -> int:
+        category_score = sum(weight for term_id, weight in weights.items() if self._categories[term_id] in categories)
+        return category_score + self._title_bonus(title, title_words)
 
     def _title_bonus(self, title: str, words: tuple[str, ...]) -> int:
         normalized_title = TextNormalizer.normalize(title)

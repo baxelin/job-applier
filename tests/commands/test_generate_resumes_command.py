@@ -56,6 +56,14 @@ class TestGenerateResumesCommand:
         assert "Aderência: 100%" in output
         assert "2026-10-29_Empresa-X_Dev-Junior.pdf" in output
 
+    def test_warns_about_support_roles(self, example_base_data, tmp_path, capsys):
+        job = tmp_path / "suporte.txt"
+        job.write_text("Empresa: Y\nVaga: Analista de Suporte N1\n---\nAtendimento de chamados no help desk.", encoding="utf-8")
+
+        command(FakeBaseDataLoader(example_base_data), tmp_path, FakePdfExporter()).run([job])
+
+        assert "Parece vaga de SUPORTE" in capsys.readouterr().out
+
     def test_reports_missing_base_data(self, tmp_path, capsys):
         exit_code = command(MissingBaseDataLoader(), tmp_path, FakePdfExporter()).run([write_job(tmp_path)])
 
