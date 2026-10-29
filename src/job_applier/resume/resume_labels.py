@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from job_applier.models.base import Locale
 from job_applier.models.resume import Period
 
@@ -42,6 +44,7 @@ class ResumeLabels:
         Locale.EN: ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
     }
     _PRESENT = {Locale.PT: "Atual", Locale.EN: "Present"}
+    _AND = {Locale.PT: "e", Locale.EN: "and"}
 
     def __init__(self, locale: Locale) -> None:
         self._locale = locale
@@ -52,6 +55,12 @@ class ResumeLabels:
     def period(self, period: Period) -> str:
         end = self._year_month(period.end) if period.end else self._PRESENT[self._locale]
         return f"{self._year_month(period.start)} - {end}"
+
+    def enumerate(self, items: Sequence[str]) -> str:
+        """Junta itens como numa frase: "A, B e C" / "A, B and C"."""
+        if len(items) <= 1:
+            return "".join(items)
+        return f"{', '.join(items[:-1])} {self._AND[self._locale]} {items[-1]}"
 
     def _year_month(self, value: str) -> str:
         year, month = value.split("-")

@@ -95,5 +95,6 @@ def settings_data() -> dict:
             "bullets_per_project": {"minimum": 1, "maximum": 2},
             "max_projects": 1,
             "max_skills": 3,
+            "summary_skill_count": 2,
         },
     }

@@ -2,7 +2,7 @@ import pytest
 
 from job_applier.matching.area import Area
 from job_applier.matching.job_analysis import JobAnalysis
-from job_applier.models.base import Locale
+from job_applier.models.base import LocalizedText, Locale
 from job_applier.resume.resume_tailor import ResumeTailor
 
 
@@ -26,6 +26,40 @@ class TestSummarySelection:
     )
     def test_picks_summary_matching_the_focus(self, tailor, focus, expected):
         assert tailor.tailor(analysis(focus)).summary.id == expected
+
+
+class TestSummaryText:
+    def test_summary_cites_the_skills_most_relevant_to_the_job(self, tailoring_resume, tailoring_glossary, resume_settings):
+        dev_summary = tailoring_resume.summaries[0].model_copy(
+            update={"text": LocalizedText(pt="Trabalho com {stack}.", en="I work with {stack}.")}
+        )
+        resume = tailoring_resume.model_copy(update={"summaries": [dev_summary, *tailoring_resume.summaries[1:]]})
+        tailor = ResumeTailor(resume, tailoring_glossary, resume_settings)
+
+        tailored = tailor.tailor(analysis({Area.DEV}, {"docker": 3}))
+
+        assert tailored.summary_text == "Trabalho com Docker e Python."
+
+    def test_summary_skips_tools_practices_and_support_skills(
+        self, tailoring_resume, tailoring_glossary, resume_settings
+    ):
+        dev_summary = tailoring_resume.summaries[0].model_copy(
+            update={"text": LocalizedText(pt="Trabalho com {stack}.", en="I work with {stack}.")}
+        )
+        glossary = tailoring_glossary.model_copy(
+            update={
+                "terms": [
+                    term.model_copy(update={"category": "tool"}) if term.id == "docker" else term
+                    for term in tailoring_glossary.terms
+                ]
+            }
+        )
+        resume = tailoring_resume.model_copy(update={"summaries": [dev_summary, *tailoring_resume.summaries[1:]]})
+
+        tailored = ResumeTailor(resume, glossary, resume_settings).tailor(analysis({Area.DEV}, {"docker": 3}))
+
+        assert tailored.summary_text == "Trabalho com Python e React."
+        assert tailored.skills[0] == "Docker"
 
 
 class TestBulletSelection:

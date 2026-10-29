@@ -81,6 +81,7 @@ class ResumeSettings(StrictModel):
     bullets_per_project: CountRange
     max_projects: int = Field(ge=0)
     max_skills: int = Field(ge=1)
+    summary_skill_count: int = Field(ge=1)
 
 
 class AutomationSettings(StrictModel):

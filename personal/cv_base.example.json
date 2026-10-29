@@ -13,8 +13,8 @@
       "id": "dev-junior",
       "tags": ["dev"],
       "text": {
-        "pt": "Desenvolvedora júnior com foco em Python e React, buscando a primeira oportunidade na área.",
-        "en": "Junior developer focused on Python and React, looking for a first opportunity in the field."
+        "pt": "Desenvolvedora júnior com foco em {stack}, buscando a primeira oportunidade na área.",
+        "en": "Junior developer focused on {stack}, looking for a first opportunity in the field."
       }
     },
     {

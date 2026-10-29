@@ -43,6 +43,7 @@
     "bullets_per_experience": { "minimum": 1, "maximum": 3 },
     "bullets_per_project": { "minimum": 1, "maximum": 3 },
     "max_projects": 2,
-    "max_skills": 14
+    "max_skills": 14,
+    "summary_skill_count": 4
   }
 }

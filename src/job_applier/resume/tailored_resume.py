@@ -23,6 +23,7 @@ class TailoredResume:
     locale: Locale
     contact: Contact
     summary: Summary
+    summary_text: str
     experiences: tuple[TailoredExperience, ...]
     projects: tuple[TailoredProject, ...]
     education: tuple[Education, ...]
