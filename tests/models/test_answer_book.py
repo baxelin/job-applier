@@ -6,11 +6,17 @@ from job_applier.models.answer_book import AnswerBook, SalaryRule
 
 class TestSalaryRule:
     def test_accepts_default_equal_to_minimum(self):
-        assert SalaryRule(patterns=["salary"], minimum=2000, default=2000).default == 2000
+        rule = SalaryRule(patterns=["salary"], minimum=2000, default=2000, contractor_multiplier=1.5)
+
+        assert rule.default == 2000
 
     def test_rejects_default_below_minimum(self):
         with pytest.raises(ValidationError, match="menor que o mínimo"):
-            SalaryRule(patterns=["salary"], minimum=2000, default=1500)
+            SalaryRule(patterns=["salary"], minimum=2000, default=1500, contractor_multiplier=1.5)
+
+    def test_rejects_contractor_multiplier_below_one(self):
+        with pytest.raises(ValidationError):
+            SalaryRule(patterns=["salary"], minimum=2000, default=2400, contractor_multiplier=0.9)
 
 
 class TestAnswerBook:

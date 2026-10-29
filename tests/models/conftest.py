@@ -47,7 +47,12 @@ def answer_book_data() -> dict:
             {"id": "pcd", "patterns": ["pcd"], "answer": None},
         ],
         "skill_years": {"patterns": ["anos de experiência com"], "default_years": 0},
-        "salary": {"patterns": ["pretensão salarial"], "minimum": 2000, "default": 2400},
+        "salary": {
+            "patterns": ["pretensão salarial"],
+            "minimum": 2000,
+            "default": 2400,
+            "contractor_multiplier": 1.5,
+        },
     }
 
 

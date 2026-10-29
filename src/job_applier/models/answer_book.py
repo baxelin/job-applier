@@ -25,14 +25,16 @@ class SkillYearsRule(StrictModel):
 
 
 class SalaryRule(StrictModel):
-    """Pretensão salarial: usa o mínimo informado pela vaga, nunca abaixo do piso.
+    """Pretensão salarial (valores CLT): usa o mínimo informado pela vaga, nunca abaixo do piso.
 
-    Quando a vaga não informa faixa, responde o valor padrão.
+    Quando a vaga não informa faixa, responde o valor padrão. Para vagas PJ, os valores são
+    multiplicados por contractor_multiplier, que compensa os benefícios que o PJ não recebe.
     """
 
     patterns: list[NonEmptyText] = Field(min_length=1)
     minimum: int = Field(gt=0)
     default: int = Field(gt=0)
+    contractor_multiplier: float = Field(ge=1)
 
     @model_validator(mode="after")
     def _default_not_below_minimum(self) -> Self:

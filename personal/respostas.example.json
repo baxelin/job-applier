@@ -28,6 +28,7 @@
   "salary": {
     "patterns": ["pretensão salarial", "salary expectation"],
     "minimum": 3000,
-    "default": 3500
+    "default": 3500,
+    "contractor_multiplier": 1.5
   }
 }
