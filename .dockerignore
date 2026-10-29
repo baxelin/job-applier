@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+
+CLAUDE.md
+credentials
+profile
+data
+.env
+*.env
+*.pdf

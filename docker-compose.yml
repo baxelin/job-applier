@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    image: job-applier
+    volumes:
+      - ./credentials:/app/credentials:ro
+      - ./profile:/app/profile
+      - ./data:/app/data
