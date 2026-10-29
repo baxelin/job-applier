@@ -50,7 +50,7 @@ class ResumeTailor:
         return max(self._resume.summaries, key=similarity)
 
     def _select_projects(self, scorer: RelevanceScorer) -> tuple[TailoredProject, ...]:
-        ranked = sorted(self._resume.projects, key=scorer.score, reverse=True)
+        ranked = sorted(self._resume.projects, key=scorer.score_project, reverse=True)
         return tuple(
             TailoredProject(project, self._select_bullets(project.bullets, scorer, self._settings.bullets_per_project))
             for project in ranked[: self._settings.max_projects]
