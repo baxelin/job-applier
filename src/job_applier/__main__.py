@@ -1,8 +1,10 @@
-from job_applier.app import Application
+import sys
+
+from job_applier.cli import CommandLine
 
 
 def main() -> None:
-    raise SystemExit(Application().run())
+    raise SystemExit(CommandLine().run(sys.argv[1:]))
 
 
 if __name__ == "__main__":
