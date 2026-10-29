@@ -20,6 +20,19 @@ class TestJobFileReader:
         assert (job.company, job.title) == ("Empresa Exemplo", "Desenvolvedor Python Júnior")
         assert job.text == "Buscamos pessoa desenvolvedora com Python e Docker."
 
+    def test_reads_optional_location_and_link(self, tmp_path):
+        path = tmp_path / "vaga.txt"
+        path.write_text(
+            "Empresa: X\nVaga: Y\nLocal: São Paulo\nLink: https://www.linkedin.com/jobs/view/123/\n"
+            "Seniority level: Entry level\n---\nPython",
+            encoding="utf-8",
+        )
+
+        job = JobFileReader().read(path)
+
+        assert job.location == "São Paulo"
+        assert str(job.url) == "https://www.linkedin.com/jobs/view/123/"
+
     def test_ignores_utf8_bom_saved_by_notepad(self, tmp_path):
         path = tmp_path / "vaga.txt"
         path.write_text(VALID_CONTENT, encoding="utf-8-sig")

@@ -12,12 +12,14 @@ class JobFileReader:
 
         Empresa: Nome da empresa
         Vaga: Título da vaga
+        Local: Cidade (opcional)
+        Link: https://www.linkedin.com/jobs/view/... (opcional)
         ---
         Descrição completa copiada do LinkedIn...
     """
 
     _SEPARATOR = re.compile(r"^-{3,}[ \t]*$", re.MULTILINE)
-    _HEADER_FIELDS = {"empresa": "company", "vaga": "title"}
+    _HEADER_FIELDS = {"empresa": "company", "vaga": "title", "local": "location", "link": "url"}
 
     def read(self, path: Path) -> JobDescription:
         try:
