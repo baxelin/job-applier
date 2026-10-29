@@ -2,7 +2,7 @@ from job_applier.app import Application
 
 
 def main() -> None:
-    Application().run()
+    raise SystemExit(Application().run())
 
 
 if __name__ == "__main__":
