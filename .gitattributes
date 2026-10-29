@@ -1,0 +1,8 @@
+# Normaliza quebras de linha para LF no repositório e na cópia de trabalho,
+# evitando diferenças entre Windows e Linux (Docker e GitHub Actions)
+* text=auto eol=lf
+
+*.pdf binary
+*.png binary
+*.jpg binary
+*.xlsx binary
