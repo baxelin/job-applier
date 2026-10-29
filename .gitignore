@@ -1,2 +1,40 @@
 # Instruções locais do Claude (não versionadas)
 CLAUDE.md
+
+# Credenciais (conta de serviço do Google, .env, cookies)
+credentials/*
+!credentials/.gitkeep
+.env
+*.env
+service-account*.json
+
+# Perfil do navegador (sessão logada do LinkedIn)
+profile/*
+!profile/.gitkeep
+
+# Dados gerados pela aplicação
+data/*
+!data/.gitkeep
+
+# Currículos e documentos
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# Testes e ferramentas
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs e sistema operacional
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
