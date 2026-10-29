@@ -4,5 +4,7 @@ services:
     image: job-applier
     volumes:
       - ./credentials:/app/credentials:ro
+      - ./config:/app/config:ro
+      - ./personal:/app/personal:ro
       - ./profile:/app/profile
       - ./data:/app/data

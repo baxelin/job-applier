@@ -8,6 +8,10 @@ credentials/*
 *.env
 service-account*.json
 
+# Dados pessoais (currículo e respostas); só os exemplos são versionados
+personal/*
+!personal/*.example.json
+
 # Perfil do navegador (sessão logada do LinkedIn)
 profile/*
 !profile/.gitkeep

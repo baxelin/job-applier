@@ -1,0 +1,33 @@
+{
+  "answers": [
+    {
+      "id": "pretensao-salarial",
+      "patterns": ["pretensão salarial", "expectativa salarial", "salary expectation"],
+      "answer": "4000"
+    },
+    {
+      "id": "nivel-ingles",
+      "patterns": ["nível de inglês", "english level"],
+      "answer": "Intermediário"
+    },
+    {
+      "id": "disponibilidade-inicio",
+      "patterns": ["disponibilidade para início", "start date"],
+      "answer": "Imediata"
+    },
+    {
+      "id": "modalidade",
+      "patterns": ["modalidade", "work arrangement"],
+      "answer": "Remoto ou híbrido"
+    },
+    {
+      "id": "pcd",
+      "patterns": ["pcd", "pessoa com deficiência", "disability"],
+      "answer": null
+    }
+  ],
+  "skill_years": {
+    "patterns": ["anos de experiência com", "years of experience"],
+    "default_years": 0
+  }
+}

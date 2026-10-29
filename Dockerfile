@@ -11,6 +11,8 @@ COPY src ./src
 RUN pip install --no-cache-dir ".[dev]" \
     && playwright install --with-deps firefox
 
+COPY config ./config
+COPY personal ./personal
 COPY tests ./tests
 
 RUN useradd --create-home appuser \

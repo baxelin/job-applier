@@ -1,0 +1,64 @@
+{
+  "contact": {
+    "full_name": "Maria Exemplo",
+    "email": "maria.exemplo@example.com",
+    "phone": "+55 11 90000-0000",
+    "location": "São Paulo, SP",
+    "linkedin_url": "https://www.linkedin.com/in/maria-exemplo",
+    "github_url": "https://github.com/maria-exemplo"
+  },
+  "summaries": [
+    {
+      "id": "dev-junior",
+      "tags": ["dev"],
+      "text": "Desenvolvedora júnior com foco em Python e React, buscando a primeira oportunidade na área."
+    },
+    {
+      "id": "devops-junior",
+      "tags": ["devops"],
+      "text": "Profissional de TI em transição para DevOps, com prática em Docker, AWS e GitHub Actions."
+    }
+  ],
+  "experiences": [
+    {
+      "role": "Analista de Sistemas Júnior",
+      "company": "Empresa Exemplo",
+      "period": { "start": "2024-01" },
+      "tags": ["dev"],
+      "bullets": [
+        { "text": "Desenvolvimento de scripts em Python para automatizar relatórios.", "tags": ["dev", "python", "automation"] },
+        { "text": "Publicação de aplicações em contêineres Docker.", "tags": ["devops", "docker"] }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "projeto-exemplo",
+      "url": "https://github.com/maria-exemplo/projeto-exemplo",
+      "tags": ["dev"],
+      "bullets": [
+        { "text": "API REST em Python com testes automatizados.", "tags": ["dev", "python", "pytest"] }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Tecnólogo em Análise e Desenvolvimento de Sistemas",
+      "institution": "Faculdade Exemplo",
+      "period": { "start": "2023-01", "end": "2025-12" }
+    }
+  ],
+  "skills": [
+    { "term": "python", "years": 2, "tags": ["dev", "devops"] },
+    { "term": "react", "years": 1, "tags": ["dev"] },
+    { "term": "docker", "years": 1, "tags": ["devops"] },
+    { "term": "aws", "years": 1, "tags": ["devops"] }
+  ],
+  "languages": [
+    { "name": "Português", "level": "Nativo" },
+    { "name": "Inglês", "level": "Intermediário" }
+  ],
+  "certifications": [
+    { "name": "AWS Certified Cloud Practitioner", "status": "in_progress" }
+  ]
+}

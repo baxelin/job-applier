@@ -8,6 +8,8 @@ venv
 
 CLAUDE.md
 credentials
+personal/*
+!personal/*.example.json
 profile
 data
 .env
