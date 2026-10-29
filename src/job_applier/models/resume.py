@@ -3,7 +3,7 @@ from typing import Annotated, Self
 
 from pydantic import Field, HttpUrl, StringConstraints, model_validator
 
-from job_applier.models.base import NonEmptyText, Slug, StrictModel, TaggedModel
+from job_applier.models.base import LocalizedText, NonEmptyText, Slug, StrictModel, TaggedModel
 from job_applier.models.uniqueness import UniquenessChecker
 
 YearMonth = Annotated[str, StringConstraints(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")]
@@ -33,15 +33,15 @@ class Contact(StrictModel):
 
 class Summary(TaggedModel):
     id: Slug
-    text: NonEmptyText
+    text: LocalizedText
 
 
 class Bullet(TaggedModel):
-    text: NonEmptyText
+    text: LocalizedText
 
 
 class Experience(TaggedModel):
-    role: NonEmptyText
+    role: LocalizedText
     company: NonEmptyText
     period: Period
     bullets: list[Bullet] = Field(min_length=1)
@@ -54,7 +54,7 @@ class Project(TaggedModel):
 
 
 class Education(StrictModel):
-    degree: NonEmptyText
+    degree: LocalizedText
     institution: NonEmptyText
     period: Period
 
@@ -67,8 +67,8 @@ class Skill(TaggedModel):
 
 
 class Language(StrictModel):
-    name: NonEmptyText
-    level: NonEmptyText
+    name: LocalizedText
+    level: LocalizedText
 
 
 class CertificationStatus(StrEnum):

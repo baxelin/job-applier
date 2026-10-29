@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from job_applier.models.automation_settings import AutomationSettings, NumberRange
+from job_applier.models.automation_settings import AutomationSettings, NumberRange, WorkplaceType
 
 
 class TestNumberRange:
@@ -27,6 +27,26 @@ class TestAutomationSettings:
 
     def test_rejects_unknown_experience_level(self, settings_data):
         settings_data["filters"]["experience_levels"] = ["junior"]
+
+        with pytest.raises(ValidationError):
+            AutomationSettings.model_validate(settings_data)
+
+    def test_search_without_own_workplace_types_uses_global_filter(self, settings_data):
+        settings = AutomationSettings.model_validate(settings_data)
+
+        assert settings.searches[0].workplace_types is None
+
+    def test_search_can_restrict_workplace_types(self, settings_data):
+        settings_data["searches"].append(
+            {"keywords": "Junior Developer", "location": "Worldwide", "workplace_types": ["remote"]}
+        )
+
+        settings = AutomationSettings.model_validate(settings_data)
+
+        assert settings.searches[1].workplace_types == [WorkplaceType.REMOTE]
+
+    def test_rejects_search_with_empty_workplace_types(self, settings_data):
+        settings_data["searches"][0]["workplace_types"] = []
 
         with pytest.raises(ValidationError):
             AutomationSettings.model_validate(settings_data)

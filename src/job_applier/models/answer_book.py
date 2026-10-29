@@ -2,7 +2,7 @@ from typing import Self
 
 from pydantic import Field, model_validator
 
-from job_applier.models.base import NonEmptyText, Slug, StrictModel
+from job_applier.models.base import LocalizedText, NonEmptyText, Slug, StrictModel
 from job_applier.models.uniqueness import UniquenessChecker
 
 
@@ -14,7 +14,7 @@ class Answer(StrictModel):
 
     id: Slug
     patterns: list[NonEmptyText] = Field(min_length=1)
-    answer: NonEmptyText | None = None
+    answer: LocalizedText | None = None
 
 
 class SkillYearsRule(StrictModel):
@@ -24,11 +24,29 @@ class SkillYearsRule(StrictModel):
     default_years: int = Field(ge=0)
 
 
+class SalaryRule(StrictModel):
+    """Pretensão salarial: usa o mínimo informado pela vaga, nunca abaixo do piso.
+
+    Quando a vaga não informa faixa, responde o valor padrão.
+    """
+
+    patterns: list[NonEmptyText] = Field(min_length=1)
+    minimum: int = Field(gt=0)
+    default: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _default_not_below_minimum(self) -> Self:
+        if self.default < self.minimum:
+            raise ValueError(f"valor padrão ({self.default}) menor que o mínimo ({self.minimum})")
+        return self
+
+
 class AnswerBook(StrictModel):
     """Respostas conhecidas para os formulários de candidatura (respostas.json)."""
 
     answers: list[Answer] = Field(min_length=1)
     skill_years: SkillYearsRule
+    salary: SalaryRule
 
     @model_validator(mode="after")
     def _ids_are_unique(self) -> Self:

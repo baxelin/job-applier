@@ -13,16 +13,16 @@ def resume_data() -> dict:
             "github_url": "https://github.com/pessoa-teste",
         },
         "summaries": [
-            {"id": "dev", "tags": ["dev"], "text": "Resumo dev."},
-            {"id": "devops", "tags": ["devops"], "text": "Resumo devops."},
+            {"id": "dev", "tags": ["dev"], "text": {"pt": "Resumo dev.", "en": "Dev summary."}},
+            {"id": "devops", "tags": ["devops"], "text": {"pt": "Resumo devops.", "en": "DevOps summary."}},
         ],
         "experiences": [
             {
-                "role": "Desenvolvedora",
+                "role": {"pt": "Desenvolvedora", "en": "Developer"},
                 "company": "Empresa",
                 "period": {"start": "2024-01", "end": "2025-06"},
                 "tags": ["dev"],
-                "bullets": [{"text": "Fez algo útil.", "tags": ["dev"]}],
+                "bullets": [{"text": {"pt": "Fez algo útil.", "en": "Did something useful."}, "tags": ["dev"]}],
             }
         ],
         "skills": [{"term": "python", "years": 1, "tags": ["dev"]}],
@@ -43,10 +43,11 @@ def glossary_data() -> dict:
 def answer_book_data() -> dict:
     return {
         "answers": [
-            {"id": "salario", "patterns": ["pretensão salarial"], "answer": "4000"},
+            {"id": "inicio", "patterns": ["start date"], "answer": {"pt": "Imediata", "en": "Immediately"}},
             {"id": "pcd", "patterns": ["pcd"], "answer": None},
         ],
         "skill_years": {"patterns": ["anos de experiência com"], "default_years": 0},
+        "salary": {"patterns": ["pretensão salarial"], "minimum": 2000, "default": 2400},
     }
 
 

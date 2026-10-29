@@ -32,7 +32,7 @@ class TestResume:
 
     def test_allows_at_most_four_summaries(self, resume_data):
         resume_data["summaries"] = [
-            {"id": f"resumo-{index}", "tags": ["dev"], "text": "Texto."} for index in range(5)
+            {"id": f"resumo-{index}", "tags": ["dev"], "text": {"pt": "Texto.", "en": "Text."}} for index in range(5)
         ]
 
         with pytest.raises(ValidationError):
@@ -53,6 +53,12 @@ class TestResume:
     @pytest.mark.parametrize("tag", ["Dev", "dev ops", "dev_ops", "-dev"])
     def test_rejects_tag_outside_slug_format(self, resume_data, tag):
         resume_data["skills"][0]["tags"] = [tag]
+
+        with pytest.raises(ValidationError):
+            Resume.model_validate(resume_data)
+
+    def test_requires_english_version_of_texts(self, resume_data):
+        resume_data["experiences"][0]["bullets"][0]["text"] = {"pt": "Só em português."}
 
         with pytest.raises(ValidationError):
             Resume.model_validate(resume_data)

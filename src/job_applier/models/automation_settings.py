@@ -46,8 +46,11 @@ class JobFilters(StrictModel):
 
 
 class SearchQuery(StrictModel):
+    """Busca de vagas. Sem modalidades próprias, vale o filtro geral (filters.workplace_types)."""
+
     keywords: NonEmptyText
     location: NonEmptyText
+    workplace_types: list[WorkplaceType] | None = Field(default=None, min_length=1)
 
 
 class AutomationSettings(StrictModel):

@@ -12,6 +12,13 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+class LocalizedText(StrictModel):
+    """Texto em português (vagas no Brasil e em Portugal) e em inglês (vagas no exterior)."""
+
+    pt: NonEmptyText
+    en: NonEmptyText
+
+
 class TaggedModel(StrictModel):
     """Item do currículo classificado por tags, usadas para montar versões por tipo de vaga."""
 
