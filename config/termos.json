@@ -40,9 +40,9 @@
     { "id": "spring", "name": "Spring Boot", "category": "backend", "synonyms": ["spring", "springboot"] },
     { "id": "dotnet", "name": ".NET", "category": "backend", "synonyms": ["dotnet", "asp.net", ".net core"] },
     { "id": "laravel", "name": "Laravel", "category": "backend", "synonyms": [] },
-    { "id": "rest-api", "name": "API REST", "category": "backend", "synonyms": ["rest", "restful", "rest api", "apis rest"] },
+    { "id": "rest-api", "name": "API REST", "name_en": "REST API", "category": "backend", "synonyms": ["restful", "rest api", "apis rest"] },
     { "id": "graphql", "name": "GraphQL", "category": "backend", "synonyms": [] },
-    { "id": "microservices", "name": "Microsserviços", "category": "backend", "synonyms": ["microservices", "microsserviço", "microservice"] },
+    { "id": "microservices", "name": "Microsserviços", "name_en": "Microservices", "category": "backend", "synonyms": ["microservices", "microsserviço", "microservice"] },
     { "id": "rabbitmq", "name": "RabbitMQ", "category": "backend", "synonyms": [] },
     { "id": "kafka", "name": "Apache Kafka", "category": "backend", "synonyms": ["kafka"] },
 
@@ -82,9 +82,9 @@
     { "id": "prometheus", "name": "Prometheus", "category": "devops", "synonyms": [] },
     { "id": "grafana", "name": "Grafana", "category": "devops", "synonyms": [] },
     { "id": "nginx", "name": "Nginx", "category": "devops", "synonyms": [] },
-    { "id": "iac", "name": "Infraestrutura como Código", "category": "devops", "synonyms": ["iac", "infrastructure as code"] },
+    { "id": "iac", "name": "Infraestrutura como Código", "name_en": "Infrastructure as Code", "category": "devops", "synonyms": ["iac", "infrastructure as code"] },
     { "id": "argocd", "name": "Argo CD", "category": "devops", "synonyms": ["argocd", "gitops"] },
-    { "id": "observability", "name": "Observabilidade", "category": "devops", "synonyms": ["observability", "monitoramento", "monitoring"] },
+    { "id": "observability", "name": "Observabilidade", "name_en": "Observability", "category": "devops", "synonyms": ["observability", "monitoramento", "monitoring"] },
     { "id": "devops", "name": "DevOps", "category": "devops", "synonyms": [] },
     { "id": "sre", "name": "SRE", "category": "devops", "synonyms": ["site reliability engineering"] },
 
@@ -93,7 +93,7 @@
     { "id": "cypress", "name": "Cypress", "category": "testing", "synonyms": [] },
     { "id": "selenium", "name": "Selenium", "category": "testing", "synonyms": [] },
     { "id": "playwright", "name": "Playwright", "category": "testing", "synonyms": [] },
-    { "id": "unit-testing", "name": "Testes unitários", "category": "testing", "synonyms": ["unit tests", "unit testing", "testes automatizados", "automated testing"] },
+    { "id": "unit-testing", "name": "Testes unitários", "name_en": "Unit Testing", "category": "testing", "synonyms": ["unit tests", "unit testing", "testes automatizados", "automated testing"] },
     { "id": "tdd", "name": "TDD", "category": "testing", "synonyms": ["test driven development", "desenvolvimento orientado a testes"] },
 
     { "id": "git", "name": "Git", "category": "tool", "synonyms": ["versionamento", "controle de versão"] },
@@ -108,20 +108,20 @@
     { "id": "windows", "name": "Windows", "category": "operating_system", "synonyms": ["windows server"] },
     { "id": "macos", "name": "macOS", "category": "operating_system", "synonyms": ["mac os", "osx"] },
 
-    { "id": "oop", "name": "POO", "category": "practice", "synonyms": ["oop", "orientação a objetos", "programação orientada a objetos", "object oriented programming"] },
+    { "id": "oop", "name": "POO", "name_en": "OOP", "category": "practice", "synonyms": ["oop", "orientação a objetos", "programação orientada a objetos", "object oriented programming"] },
     { "id": "clean-code", "name": "Clean Code", "category": "practice", "synonyms": ["código limpo"] },
     { "id": "solid", "name": "SOLID", "category": "practice", "synonyms": [] },
     { "id": "design-patterns", "name": "Design Patterns", "category": "practice", "synonyms": ["padrões de projeto"] },
-    { "id": "agile", "name": "Metodologias ágeis", "category": "practice", "synonyms": ["agile", "ágil", "metodologia ágil"] },
+    { "id": "agile", "name": "Metodologias ágeis", "name_en": "Agile", "category": "practice", "synonyms": ["agile", "ágil", "metodologia ágil"] },
     { "id": "scrum", "name": "Scrum", "category": "practice", "synonyms": [] },
     { "id": "kanban", "name": "Kanban", "category": "practice", "synonyms": [] },
-    { "id": "automation", "name": "Automação", "category": "practice", "synonyms": ["automation", "automação de processos"] },
+    { "id": "automation", "name": "Automação", "name_en": "Automation", "category": "practice", "synonyms": ["automation", "automação de processos"] },
     { "id": "web-scraping", "name": "Web Scraping", "category": "practice", "synonyms": ["scraping", "raspagem de dados"] },
 
-    { "id": "technical-support", "name": "Suporte técnico", "category": "support", "synonyms": ["help desk", "helpdesk", "service desk", "suporte n1", "suporte n2"] },
+    { "id": "technical-support", "name": "Suporte técnico", "name_en": "Technical Support", "category": "support", "synonyms": ["help desk", "helpdesk", "service desk", "suporte n1", "suporte n2"] },
     { "id": "glpi", "name": "GLPI", "category": "support", "synonyms": [] },
     { "id": "itil", "name": "ITIL", "category": "support", "synonyms": [] },
-    { "id": "networking", "name": "Redes", "category": "support", "synonyms": ["redes de computadores", "tcp/ip", "networking"] },
+    { "id": "networking", "name": "Redes", "name_en": "Networking", "category": "support", "synonyms": ["redes de computadores", "tcp/ip", "networking"] },
     { "id": "active-directory", "name": "Active Directory", "category": "support", "synonyms": [] }
   ]
 }

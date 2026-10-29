@@ -1,3 +1,4 @@
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -12,11 +13,19 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+class Locale(StrEnum):
+    PT = "pt"
+    EN = "en"
+
+
 class LocalizedText(StrictModel):
     """Texto em português (vagas no Brasil e em Portugal) e em inglês (vagas no exterior)."""
 
     pt: NonEmptyText
     en: NonEmptyText
+
+    def in_locale(self, locale: Locale) -> str:
+        return self.pt if locale is Locale.PT else self.en
 
 
 class TaggedModel(StrictModel):

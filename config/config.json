@@ -32,5 +32,17 @@
     { "keywords": "Estágio DevOps", "location": "São Paulo, SP" },
     { "keywords": "Cloud Júnior", "location": "Brasil" },
     { "keywords": "Junior DevOps Engineer", "location": "Worldwide", "workplace_types": ["remote"] }
-  ]
+  ],
+  "resume": {
+    "weights": {
+      "area_match": 3,
+      "keyword_match": 4,
+      "support_penalty": 5,
+      "keyword_occurrence_cap": 3
+    },
+    "bullets_per_experience": { "minimum": 1, "maximum": 3 },
+    "bullets_per_project": { "minimum": 1, "maximum": 3 },
+    "max_projects": 2,
+    "max_skills": 14
+  }
 }

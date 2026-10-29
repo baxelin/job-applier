@@ -101,3 +101,7 @@ class Resume(StrictModel):
 
     def skill_terms(self) -> set[str]:
         return {skill.term for skill in self.skills}
+
+    def bullet_tags(self) -> set[str]:
+        sections = (*self.experiences, *self.projects)
+        return {tag for section in sections for bullet in section.bullets for tag in bullet.tags}

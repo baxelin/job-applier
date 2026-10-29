@@ -53,8 +53,38 @@ class SearchQuery(StrictModel):
     workplace_types: list[WorkplaceType] | None = Field(default=None, min_length=1)
 
 
+class CountRange(StrictModel):
+    minimum: int = Field(ge=0)
+    maximum: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _minimum_not_above_maximum(self) -> Self:
+        if self.minimum > self.maximum:
+            raise ValueError(f"mínimo ({self.minimum}) maior que o máximo ({self.maximum})")
+        return self
+
+
+class ScoringWeights(StrictModel):
+    """Pesos da pontuação de bullets, skills e projetos em relação à vaga."""
+
+    area_match: float = Field(ge=0)
+    keyword_match: float = Field(ge=0)
+    support_penalty: float = Field(ge=0)
+    keyword_occurrence_cap: int = Field(ge=1)
+
+
+class ResumeSettings(StrictModel):
+    """Regras de montagem do CV adaptado."""
+
+    weights: ScoringWeights
+    bullets_per_experience: CountRange
+    bullets_per_project: CountRange
+    max_projects: int = Field(ge=0)
+    max_skills: int = Field(ge=1)
+
+
 class AutomationSettings(StrictModel):
-    """Configuração do robô (config.json): ritmo, limites, filtros e buscas em ordem de prioridade."""
+    """Configuração do robô (config.json): ritmo, limites, filtros, buscas em ordem de prioridade e CV."""
 
     daily_application_limit: int = Field(ge=1)
     delay_between_actions_seconds: NumberRange
@@ -62,3 +92,4 @@ class AutomationSettings(StrictModel):
     long_pause: LongPause
     filters: JobFilters
     searches: list[SearchQuery] = Field(min_length=1)
+    resume: ResumeSettings

@@ -1,4 +1,24 @@
+from pathlib import Path
+
 import pytest
+
+from job_applier.config.base_data_loader import BaseDataLoader, BaseDataPaths
+from job_applier.models.base_data import BaseData
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope="session")
+def example_base_data() -> BaseData:
+    """Configuração versionada (glossário real) com os dados pessoais fictícios de exemplo."""
+    return BaseDataLoader(
+        BaseDataPaths(
+            resume=PROJECT_ROOT / "personal" / "cv_base.example.json",
+            answer_book=PROJECT_ROOT / "personal" / "respostas.example.json",
+            glossary=PROJECT_ROOT / "config" / "termos.json",
+            settings=PROJECT_ROOT / "config" / "config.json",
+        )
+    ).load()
 
 
 @pytest.fixture
@@ -69,4 +89,11 @@ def settings_data() -> dict:
             "forbidden_title_words": ["sênior"],
         },
         "searches": [{"keywords": "Desenvolvedor Júnior", "location": "Brasil"}],
+        "resume": {
+            "weights": {"area_match": 3, "keyword_match": 2, "support_penalty": 5, "keyword_occurrence_cap": 3},
+            "bullets_per_experience": {"minimum": 1, "maximum": 2},
+            "bullets_per_project": {"minimum": 1, "maximum": 2},
+            "max_projects": 1,
+            "max_skills": 3,
+        },
     }
