@@ -1,6 +1,7 @@
 import re
 from collections.abc import Sequence
 from datetime import date
+from urllib.parse import parse_qs, quote, urlsplit
 
 from bs4 import BeautifulSoup, Tag
 
@@ -65,6 +66,11 @@ class JobPageParser:
     _EASY_APPLY_SIGNS = ("candidatura simplificada", "easy apply")
     _APPLY_SIGNS = ("candidatar-se", "candidatar", "apply")
     _CLOSED_SIGNS = ("nao aceita mais candidaturas", "no longer accepting applications")
+    _LABELED_LINKS = "a[aria-label][href]"
+    _EXTERNAL_APPLY_SIGNS = ("site da empresa", "company website")
+    _LEAVING_LINKEDIN_PATH = "/safety/go"
+    _URL_RESERVED_CHARACTERS = "%/:?#[]@!$&'()*+,;=~"
+    _WEB_SCHEMES = frozenset({"http", "https"})
     _SEPARATOR = re.compile(r"\s*[·•]\s*")
     _BLOCK_TAGS = ("p", "div", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6", "section")
 
@@ -83,6 +89,7 @@ class JobPageParser:
             raise JobExtractionError(linkedin_id, missing)
 
         top_card = self._top_card(soup)
+        apply_type = self._apply_type(soup)
         return JobPosting(
             linkedin_id=linkedin_id,
             description=JobDescription(
@@ -92,7 +99,8 @@ class JobPageParser:
                 location=self._location(top_card),
                 url=JobPosting.url_for(linkedin_id),
             ),
-            apply_type=self._apply_type(soup),
+            apply_type=apply_type,
+            external_apply_url=self._external_apply_url(soup) if apply_type is ApplyType.EXTERNAL else None,
             applicants=self._text_parser.applicants(top_card),
             posted_on=self._text_parser.posted_on(top_card, today),
         )
@@ -180,3 +188,19 @@ class JobPageParser:
         if any(sign in label for label in labels for sign in self._APPLY_SIGNS):
             return ApplyType.EXTERNAL
         return ApplyType.UNKNOWN
+
+    def _external_apply_url(self, soup: BeautifulSoup) -> str | None:
+        """O destino está no href do botão, então é lido sem clicar em nada na página."""
+        for link in soup.select(self._LABELED_LINKS):
+            label = TextNormalizer.normalize(str(link["aria-label"]))
+            if any(sign in label for sign in self._EXTERNAL_APPLY_SIGNS):
+                return self._destination_of(str(link["href"]))
+        return None
+
+    def _destination_of(self, href: str) -> str | None:
+        """Tira o aviso de saída do LinkedIn (/safety/go/?url=destino) e mantém o endereço só com ASCII."""
+        parts = urlsplit(href)
+        if parts.path.rstrip("/") == self._LEAVING_LINKEDIN_PATH:
+            href = parse_qs(parts.query).get("url", [""])[0]
+        destination = quote(href, safe=self._URL_RESERVED_CHARACTERS)
+        return destination if urlsplit(destination).scheme in self._WEB_SCHEMES else None

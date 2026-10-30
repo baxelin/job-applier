@@ -62,6 +62,57 @@ class TestCurrentLayout:
         assert parse(html).apply_type is ApplyType.EASY_APPLY
 
 
+class TestExternalApplyUrl:
+    def test_unwraps_the_linkedin_exit_notice(self):
+        href = (
+            "https://www.linkedin.com/safety/go/?url=https%3A%2F%2Fcarreiras%2Eempresa%2Ecom%2Ebr%2Fjob%2F89"
+            "%3Fsource%3Dlinkedin%26ref%3D1&amp;urlhash=Ibt3&amp;mt=sqv8fN8BfGyAwbUx"
+        )
+
+        posting = parse(current_job_page(apply_href=href))
+
+        assert posting.external_apply_url == "https://carreiras.empresa.com.br/job/89?source=linkedin&ref=1"
+
+    def test_keeps_a_direct_link(self):
+        assert parse(current_job_page()).external_apply_url == "https://empresa.example/vaga"
+
+    def test_keeps_the_destination_ascii_so_the_spreadsheet_link_works(self):
+        href = (
+            "https://www.linkedin.com/safety/go/?url=https%3A%2F%2Fempresa%2Eexample%2Fapply%3Futm_campaign%3D"
+            "S%C3%A3oPaulo%2CBrazil&amp;urlhash=90rJ"
+        )
+
+        assert parse(current_job_page(apply_href=href)).external_apply_url == (
+            "https://empresa.example/apply?utm_campaign=S%C3%A3oPaulo,Brazil"
+        )
+
+    def test_reads_the_english_label(self):
+        html = current_job_page(apply_label="Apply on company website")
+
+        assert parse(html).external_apply_url == "https://empresa.example/vaga"
+
+    def test_ignores_other_outbound_links_of_the_page(self):
+        other_link = '<a aria-label="Abrir https://empresa.example/apply" href="https://empresa.example/apply"></a>'
+        html = current_job_page().replace('<a class="b0alko"', f'{other_link}<a class="b0alko"')
+
+        assert parse(html).external_apply_url == "https://empresa.example/vaga"
+
+    def test_has_no_url_when_the_button_is_not_a_link(self):
+        button = '<button class="jobs-apply-button" aria-label="Candidatar-se no site da empresa">Candidatar-se</button>'
+
+        posting = parse(job_page(apply_button=button))
+
+        assert (posting.apply_type, posting.external_apply_url) == (ApplyType.EXTERNAL, None)
+
+    def test_refuses_a_destination_that_is_not_a_web_address(self):
+        assert parse(current_job_page(apply_href="javascript:alert(1)")).external_apply_url is None
+
+    def test_has_no_url_on_easy_apply(self):
+        html = current_job_page(apply_label="Candidatura simplificada à vaga de Desenvolvedor")
+
+        assert parse(html).external_apply_url is None
+
+
 class TestJobPageParser:
     def test_extracts_job_fields(self):
         posting = parse(job_page())

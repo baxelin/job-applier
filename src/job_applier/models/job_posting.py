@@ -23,6 +23,7 @@ class JobPosting(StrictModel):
     linkedin_id: LinkedInJobId
     description: JobDescription
     apply_type: ApplyType
+    external_apply_url: str | None = None
     applicants: int | None = Field(default=None, ge=0)
     posted_on: date | None = None
 

@@ -33,6 +33,7 @@ def current_job_page(
     company: str = "Jungle Gaming",
     top_line: str = "Brasil · há 3 dias · Mais de 100 pessoas clicaram em Candidate-se",
     apply_label: str = "Candidatar-se no site da empresa",
+    apply_href: str = "https://empresa.example/vaga",
     about_section_attributes: str = "",
 ) -> str:
     """Layout de 2026: classes embaralhadas; âncoras estáveis em <title>, aria-label e título "Sobre a vaga"."""
@@ -43,7 +44,7 @@ def current_job_page(
         <a class="b0ak8d" aria-label="Empresa {company}." href="/company/x/life"><p>{company}</p></a>
         <p class="b0ak8d b0ak3r"><span>{title}</span></p>
         <p class="b0ak8d b0ak3b"><span>{top_line.replace(" · ", "</span> · <span>")}</span></p>
-        <a class="b0alko" aria-label="{apply_label}" href="https://empresa.example/vaga">
+        <a class="b0alko" aria-label="{apply_label}" href="{apply_href}">
           <span>Candidatar-se</span></a>
       </div>
       <div {about_section_attributes}>
