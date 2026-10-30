@@ -42,6 +42,7 @@ class LinkedInBrowser(JobBrowser):
     _FEED_URL = "https://www.linkedin.com/feed/"
     _LOGGED_IN_URL_PARTS = ("/feed", "/jobs", "/in/", "/mynetwork")
     _CONTENT_TIMEOUT_MS = 15_000
+    _JOB_CONTENT = "[componentkey^='JobDetails_AboutTheJob_'], #job-details, .show-more-less-html__markup, h1"
     _SCROLL_PAUSE_MS = (400, 900)
     _SCROLL_RESULTS_SCRIPT = """
         () => {
@@ -105,7 +106,7 @@ class LinkedInBrowser(JobBrowser):
         return self._snapshot()
 
     def open_job(self, linkedin_id: str) -> PageSnapshot:
-        return self.open(JobPosting.url_for(linkedin_id), wait_for="h1")
+        return self.open(JobPosting.url_for(linkedin_id), wait_for=self._JOB_CONTENT)
 
     def save_snapshot(self, name: str) -> Path:
         self._snapshots_dir.mkdir(parents=True, exist_ok=True)

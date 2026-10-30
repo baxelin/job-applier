@@ -4,13 +4,44 @@ import pytest
 
 from job_applier.linkedin.job_page_parser import JobExtractionError, JobPageParser
 from job_applier.models.job_posting import ApplyType
-from tests.linkedin.pages import job_page
+from tests.linkedin.pages import current_job_page, job_page
 
 TODAY = date(2026, 10, 29)
 
 
 def parse(html: str):
     return JobPageParser().parse(html, "123", TODAY)
+
+
+class TestCurrentLayout:
+    def test_reads_title_and_company_from_stable_anchors(self):
+        job = parse(current_job_page()).description
+
+        assert (job.title, job.company) == ("Desenvolvedor Front-end Junior | Remoto", "Jungle Gaming")
+
+    def test_reads_location_date_and_applicants_from_the_top_line_not_from_similar_jobs(self):
+        posting = parse(current_job_page())
+
+        assert posting.description.location == "Brasil"
+        assert posting.posted_on == date(2026, 10, 26)
+        assert posting.applicants == 100
+
+    def test_reads_description_without_the_expand_button(self):
+        description = parse(current_job_page()).description.text
+
+        assert description.splitlines() == [
+            "A Jungle Gaming cria jogos. Procuramos pessoa com React e TypeScript.",
+            "Requisitos:",
+            "Git",
+        ]
+
+    def test_detects_external_application_by_aria_label(self):
+        assert parse(current_job_page()).apply_type is ApplyType.EXTERNAL
+
+    def test_detects_easy_apply_by_aria_label(self):
+        html = current_job_page(apply_label="Candidatura simplificada à vaga de Desenvolvedor")
+
+        assert parse(html).apply_type is ApplyType.EASY_APPLY
 
 
 class TestJobPageParser:

@@ -27,6 +27,40 @@ def job_page(
     """
 
 
+def current_job_page(
+    job_id: str = "123",
+    title: str = "Desenvolvedor Front-end Junior | Remoto",
+    company: str = "Jungle Gaming",
+    top_line: str = "Brasil · há 3 dias · Mais de 100 pessoas clicaram em Candidate-se",
+    apply_label: str = "Candidatar-se no site da empresa",
+) -> str:
+    """Layout de 2026: classes embaralhadas; âncoras estáveis em <title>, aria-label e componentkey."""
+    return f"""
+    <html><head><title>(2) {title} | {company} | LinkedIn</title></head><body>
+      <div class="b0alro b0aayf">
+        <a class="b0ak8d" aria-label="Logo da empresa {company}." href="/company/x/life"></a>
+        <a class="b0ak8d" aria-label="Empresa {company}." href="/company/x/life"><p>{company}</p></a>
+        <p class="b0ak8d b0ak3r"><span>{title}</span></p>
+        <p class="b0ak8d b0ak3b"><span>{top_line.replace(" · ", "</span> · <span>")}</span></p>
+        <a class="b0alko" aria-label="{apply_label}" href="https://empresa.example/vaga">
+          <span>Candidatar-se</span></a>
+      </div>
+      <div componentkey="JobDetails_AboutTheJob_{job_id}">
+        <h2 class="b0ak8d">Sobre a vaga</h2>
+        <span data-testid="expandable-text-box">
+          <p>A {company} cria jogos. Procuramos pessoa com <strong>React</strong> e TypeScript.</p>
+          <p>Requisitos:<br>Git</p>
+          <span>…</span>
+          <button data-testid="expandable-text-button">mais</button>
+        </span>
+      </div>
+      <div componentkey="JobDetailsSimilarJobsSlot_{job_id}">
+        <p><span>Outra vaga</span> · <span>há 1 dia</span> · <span>5 pessoas clicaram em Candidate-se</span></p>
+      </div>
+    </body></html>
+    """
+
+
 def search_page(*job_ids: str) -> str:
     cards = "".join(
         f'<li data-occludable-job-id="{job_id}"><div class="job-card-container" data-job-id="{job_id}">'
