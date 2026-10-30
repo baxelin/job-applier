@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
@@ -43,6 +43,23 @@ class ApplicationTracker:
     def record_skipped(self, evaluation: JobEvaluation, posting: JobPosting | None, reason: str) -> JobApplication:
         return self._save(evaluation, posting, resume_path=None, status=ApplicationStatus.SKIPPED, notes=reason)
 
+    def record_rehearsal_ready(self, application: JobApplication, notes: str) -> None:
+        self._update_status(application, ApplicationStatus.REHEARSED, notes)
+
+    def record_unknown_questions(self, application: JobApplication, questions: Sequence[str]) -> None:
+        """Guarda as perguntas para o usuário responder e deixa a vaga pendente até lá."""
+        for question in questions:
+            self._questions.register(question, application.id, self._moment())
+        self._update_status(
+            application, ApplicationStatus.UNKNOWN_QUESTION_PENDING, f"Sem resposta para: {' | '.join(questions)}"
+        )
+
+    def record_unavailable(self, application: JobApplication, reason: str) -> None:
+        self._update_status(application, ApplicationStatus.SKIPPED, reason)
+
+    def record_failure(self, application: JobApplication, reason: str) -> None:
+        self._update_status(application, ApplicationStatus.FAILED, reason)
+
     def refresh_report(self) -> None:
         """Recria a planilha; lança SpreadsheetLockedError se ela estiver aberta no Excel."""
         self._report.write(
@@ -65,7 +82,7 @@ class ApplicationTracker:
         status: ApplicationStatus,
         notes: str | None = None,
     ) -> JobApplication:
-        moment = self._now().replace(microsecond=0)
+        moment = self._moment()
         job = evaluation.job
         return self._applications.save(
             JobApplication(
@@ -92,6 +109,12 @@ class ApplicationTracker:
                 updated_at=moment,
             )
         )
+
+    def _update_status(self, application: JobApplication, status: ApplicationStatus, notes: str) -> None:
+        self._applications.update_status(application.job_key, status, notes, self._moment())
+
+    def _moment(self) -> datetime:
+        return self._now().replace(microsecond=0)
 
     def _relative_to_project(self, path: Path) -> str:
         """Caminho relativo à raiz do projeto, válido tanto no Docker quanto no Windows."""

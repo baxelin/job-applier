@@ -40,6 +40,8 @@ class ExcelReportWriter:
     _STATUS_LABELS = {
         ApplicationStatus.CV_GENERATED: "CV gerado",
         ApplicationStatus.MANUAL_APPLICATION_PENDING: "Pendente – aplicar manualmente",
+        ApplicationStatus.UNKNOWN_QUESTION_PENDING: "Pendente – pergunta sem resposta",
+        ApplicationStatus.REHEARSED: "Ensaio OK",
         ApplicationStatus.APPLIED: "Candidatura enviada",
         ApplicationStatus.SKIPPED: "Ignorada",
         ApplicationStatus.FAILED: "Erro",

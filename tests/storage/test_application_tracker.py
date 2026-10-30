@@ -8,7 +8,8 @@ from job_applier.models.job_description import JobDescription
 from job_applier.models.job_posting import ApplyType, JobPosting
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
-from tests.factories import tracker_for
+from job_applier.storage.application_repository import SqliteApplicationRepository
+from tests.factories import database_for, tracker_for
 
 JOB = JobDescription(
     company="Empresa X",
@@ -80,6 +81,49 @@ class TestApplicationTracker:
 
         assert recorded.status is ApplicationStatus.MANUAL_APPLICATION_PENDING
         assert recorded.external_apply_url == "https://empresa.example/vaga"
+
+    def test_rehearsed_job_is_marked_as_ready(self, generator, tmp_path):
+        app_tracker = tracker(tmp_path)
+        recorded = app_tracker.record(generator.generate(JOB), POSTING)
+
+        app_tracker.record_rehearsal_ready(recorded, "Ensaio em data/ensaios/x")
+
+        saved = SqliteApplicationRepository(database_for(tmp_path)).list_all()[0]
+        assert (saved.status, saved.notes) == (ApplicationStatus.REHEARSED, "Ensaio em data/ensaios/x")
+
+    def test_unknown_questions_are_saved_and_leave_the_job_pending(self, generator, tmp_path):
+        app_tracker = tracker(tmp_path)
+        recorded = app_tracker.record(generator.generate(JOB), POSTING)
+
+        app_tracker.record_unknown_questions(recorded, ["Primeira?", "Segunda?"])
+        app_tracker.refresh_report()
+
+        saved = SqliteApplicationRepository(database_for(tmp_path)).list_all()[0]
+        assert saved.status is ApplicationStatus.UNKNOWN_QUESTION_PENDING
+        assert saved.notes == "Sem resposta para: Primeira? | Segunda?"
+        workbook = load_workbook(tmp_path / "data" / "candidaturas.xlsx")
+        assert workbook["Vagas"]["E2"].value == "Pendente – pergunta sem resposta"
+        assert {row[0].value for row in workbook["Perguntas"].iter_rows(min_row=2)} == {"Primeira?", "Segunda?"}
+        assert workbook["Perguntas"]["C2"].value == "Empresa X - Desenvolvedor Python Júnior"
+
+    def test_unavailable_job_is_skipped_with_the_reason(self, generator, tmp_path):
+        app_tracker = tracker(tmp_path)
+        recorded = app_tracker.record(generator.generate(JOB), POSTING)
+
+        app_tracker.record_unavailable(recorded, "Sem botão de candidatura")
+
+        saved = SqliteApplicationRepository(database_for(tmp_path)).list_all()[0]
+        assert (saved.status, saved.notes) == (ApplicationStatus.SKIPPED, "Sem botão de candidatura")
+
+    def test_failure_keeps_the_reason(self, generator, tmp_path):
+        app_tracker = tracker(tmp_path)
+        recorded = app_tracker.record(generator.generate(JOB), POSTING)
+
+        app_tracker.record_failure(recorded, "A página não avançou")
+        app_tracker.refresh_report()
+
+        saved = SqliteApplicationRepository(database_for(tmp_path)).list_all()[0]
+        assert (saved.status, saved.notes) == (ApplicationStatus.FAILED, "A página não avançou")
 
     def test_records_skipped_job_without_resume(self, generator, tmp_path):
         recorded = tracker(tmp_path).record_skipped(generator.evaluate(JOB), POSTING, "Vaga de suporte")

@@ -9,6 +9,8 @@ from job_applier.models.base import NonEmptyText, StrictModel
 class ApplicationStatus(StrEnum):
     CV_GENERATED = "cv_gerado"
     MANUAL_APPLICATION_PENDING = "pendente_aplicar_manualmente"
+    UNKNOWN_QUESTION_PENDING = "pendente_pergunta"
+    REHEARSED = "ensaio_ok"
     APPLIED = "candidatura_enviada"
     SKIPPED = "ignorada"
     FAILED = "erro"
