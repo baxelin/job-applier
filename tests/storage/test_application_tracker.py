@@ -65,6 +65,22 @@ class TestApplicationTracker:
             date(2026, 10, 27),
         )
 
+    def test_easy_apply_job_stays_as_generated_resume(self, generator, tmp_path):
+        recorded = tracker(tmp_path).record(generator.generate(JOB), POSTING)
+
+        assert recorded.status is ApplicationStatus.CV_GENERATED
+        assert recorded.external_apply_url is None
+
+    def test_external_job_is_pending_with_its_link(self, generator, tmp_path):
+        posting = POSTING.model_copy(
+            update={"apply_type": ApplyType.EXTERNAL, "external_apply_url": "https://empresa.example/vaga"}
+        )
+
+        recorded = tracker(tmp_path).record(generator.generate(JOB), posting)
+
+        assert recorded.status is ApplicationStatus.MANUAL_APPLICATION_PENDING
+        assert recorded.external_apply_url == "https://empresa.example/vaga"
+
     def test_records_skipped_job_without_resume(self, generator, tmp_path):
         recorded = tracker(tmp_path).record_skipped(generator.evaluate(JOB), POSTING, "Vaga de suporte")
 

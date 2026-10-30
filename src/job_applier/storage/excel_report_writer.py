@@ -29,15 +29,17 @@ class ExcelReportWriter:
     """
 
     _APPLICATION_COLUMNS = {
-        "Data": 17, "Empresa": 24, "Vaga": 42, "Local": 24, "Status": 20, "Aderência": 11, "Candidatura": 24,
-        "Candidatos": 12, "Publicada em": 13, "Foco": 14, "Idioma": 8, "Vaga de suporte": 15, "Tem": 50,
-        "Falta": 40, "Observação": 40, "CV": 50, "Link da vaga": 14, "Atualizado em": 17,
+        "Data": 17, "Empresa": 24, "Vaga": 42, "Local": 24, "Status": 30, "Aderência": 11, "Candidatura": 24,
+        "Link para aplicar": 17, "Candidatos": 12, "Publicada em": 13, "Foco": 14, "Idioma": 8,
+        "Vaga de suporte": 15, "Tem": 50, "Falta": 40, "Observação": 40, "CV": 50, "Link da vaga": 14,
+        "Atualizado em": 17,
     }
     _QUESTION_COLUMNS = {"Pergunta": 70, "Ocorrências": 12, "Última vaga": 50, "Primeira vez": 17, "Última vez": 17}
     _RUN_COLUMNS = {"Início": 17, "Fim": 17, "Situação": 14, "Motivo": 70, "Vagas vistas": 13, "Vagas registradas": 17}
 
     _STATUS_LABELS = {
         ApplicationStatus.CV_GENERATED: "CV gerado",
+        ApplicationStatus.MANUAL_APPLICATION_PENDING: "Pendente – aplicar manualmente",
         ApplicationStatus.APPLIED: "Candidatura enviada",
         ApplicationStatus.SKIPPED: "Ignorada",
         ApplicationStatus.FAILED: "Erro",
@@ -110,6 +112,7 @@ class ExcelReportWriter:
                 "Status": self._STATUS_LABELS[application.status],
                 "Aderência": application.fit_percentage / 100,
                 "Candidatura": self._APPLY_TYPE_LABELS.get(application.apply_type),
+                "Link para aplicar": "Abrir" if application.external_apply_url else None,
                 "Candidatos": application.applicants,
                 "Publicada em": application.posted_on,
                 "Foco": application.focus,
@@ -130,6 +133,8 @@ class ExcelReportWriter:
             self._link(cells["CV"], Path(os.path.relpath(resume_file, self._path.parent)).as_posix())
         if application.url:
             self._link(cells["Link da vaga"], application.url)
+        if application.external_apply_url:
+            self._link(cells["Link para aplicar"], application.external_apply_url)
 
     def _append_question(self, sheet: Worksheet, question: UnknownQuestion) -> None:
         last_job = f"{question.last_company} - {question.last_title}" if question.last_company else None

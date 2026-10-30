@@ -42,6 +42,7 @@ class JobScanner:
     Empresas bloqueadas (e títulos proibidos, quando o card mostra o título) são descartadas já na
     lista de resultados, sem abrir a vaga. O que só aparece depois de abrir (título proibido, suporte,
     vaga encerrada, empresa bloqueada não detectada no card) é registrado como ignorado, sem CV.
+    Vagas com candidatura no site da empresa ganham CV e ficam pendentes de aplicação manual.
 
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
     ou quando várias páginas seguidas não forem reconhecidas (provável mudança de layout).
@@ -144,8 +145,15 @@ class JobScanner:
 
         self._consecutive_extraction_errors = 0
         self._jobs_seen += 1
+        self._save_page_if_external_link_is_missing(posting)
         self._record(posting)
         self._pacer.after_job(self._jobs_seen)
+
+    def _save_page_if_external_link_is_missing(self, posting: JobPosting) -> None:
+        """A vaga segue pendente com o link do LinkedIn; a página salva mostra se o botão mudou de layout."""
+        if posting.apply_type is ApplyType.EXTERNAL and not posting.external_apply_url:
+            snapshot = self._browser.save_snapshot(f"vaga-{posting.linkedin_id}")
+            logger.warning("Vaga %s: link externo não encontrado. Página salva em %s.", posting.linkedin_id, snapshot)
 
     def _record(self, posting: JobPosting) -> None:
         evaluation = self._generator.evaluate(posting.description)

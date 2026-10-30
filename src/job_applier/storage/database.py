@@ -88,6 +88,12 @@ class Database:
             jobs_recorded INTEGER NOT NULL
         );
         """,
+        # 3: link das vagas externas; as já registradas (nunca reabertas) também ficam pendentes
+        """
+        ALTER TABLE job_applications ADD COLUMN external_apply_url TEXT;
+        UPDATE job_applications SET status = 'pendente_aplicar_manualmente'
+        WHERE apply_type = 'site_externo' AND status = 'cv_gerado';
+        """,
     )
 
     def __init__(self, path: Path) -> None:

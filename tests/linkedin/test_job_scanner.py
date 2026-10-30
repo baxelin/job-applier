@@ -163,7 +163,44 @@ class TestJobScanner:
 
         [recorded] = applications.list_all()
         assert result.jobs_recorded == 1
-        assert (recorded.company, recorded.status) == ("Jungle Gaming", ApplicationStatus.CV_GENERATED)
+        assert recorded.company == "Jungle Gaming"
+
+    def test_external_job_gets_resume_and_waits_for_manual_application(self, make_scanner, applications):
+        browser = FakeBrowser([["1"]], {"1": current_job_page(job_id="1", apply_href="https://empresa.example/vaga-1")})
+
+        make_scanner(browser).run()
+
+        [recorded] = applications.list_all()
+        assert recorded.status is ApplicationStatus.MANUAL_APPLICATION_PENDING
+        assert recorded.external_apply_url == "https://empresa.example/vaga-1"
+        assert recorded.resume_path.endswith(".pdf")
+
+    def test_external_job_without_link_stays_pending_and_saves_the_page(self, make_scanner, applications):
+        button = '<button class="jobs-apply-button" aria-label="Candidatar-se no site da empresa">Candidatar-se</button>'
+        page = job_page(description="<p>Python e Docker no nosso produto.</p>", apply_button=button)
+        browser = FakeBrowser([["1"]], {"1": page})
+
+        make_scanner(browser).run()
+
+        [recorded] = applications.list_all()
+        assert recorded.status is ApplicationStatus.MANUAL_APPLICATION_PENDING
+        assert recorded.external_apply_url is None
+        assert browser.snapshots == ["busca", "vaga-1"]
+
+    def test_pending_external_jobs_count_towards_the_daily_limit(self, make_scanner, applications):
+        applications.save(
+            application(
+                job_key="antiga",
+                status=ApplicationStatus.MANUAL_APPLICATION_PENDING,
+                created_at=TODAY.isoformat() + "T08:00:00",
+            )
+        )
+        browser = FakeBrowser([["1"]], {"1": dev_job()})
+
+        result = make_scanner(browser, daily_application_limit=1).run()
+
+        assert browser.opened_jobs == []
+        assert result.reason == "Limite diário de vagas atingido."
 
     def test_stops_at_the_daily_limit_counting_todays_resumes(self, make_scanner, applications):
         applications.save(application(job_key="antiga", created_at=TODAY.isoformat() + "T08:00:00"))

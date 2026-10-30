@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from job_applier.models.job_application import ApplicationStatus, JobApplication
-from job_applier.models.job_posting import JobPosting
+from job_applier.models.job_posting import ApplyType, JobPosting
 from job_applier.resume.resume_generator import GeneratedResume, JobEvaluation
 from job_applier.storage.application_repository import ApplicationRepository
 from job_applier.storage.excel_report_writer import ExcelReportWriter
@@ -37,7 +37,7 @@ class ApplicationTracker:
             generated.evaluation,
             posting,
             resume_path=self._relative_to_project(generated.path),
-            status=ApplicationStatus.CV_GENERATED,
+            status=self._status_with_resume(posting),
         )
 
     def record_skipped(self, evaluation: JobEvaluation, posting: JobPosting | None, reason: str) -> JobApplication:
@@ -50,6 +50,12 @@ class ApplicationTracker:
             self._questions.list_all(),
             self._runs.list_recent(self._RECENT_RUNS_IN_REPORT),
         )
+
+    @staticmethod
+    def _status_with_resume(posting: JobPosting | None) -> ApplicationStatus:
+        if posting and posting.apply_type is ApplyType.EXTERNAL:
+            return ApplicationStatus.MANUAL_APPLICATION_PENDING
+        return ApplicationStatus.CV_GENERATED
 
     def _save(
         self,
@@ -77,6 +83,7 @@ class ApplicationTracker:
                 missing_terms=evaluation.fit.missing_terms,
                 resume_path=resume_path,
                 apply_type=posting.apply_type if posting else None,
+                external_apply_url=posting.external_apply_url if posting else None,
                 applicants=posting.applicants if posting else None,
                 posted_on=posting.posted_on if posting else None,
                 status=status,

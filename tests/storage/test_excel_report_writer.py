@@ -57,7 +57,33 @@ class TestExcelReportWriter:
 
         sheet = load_workbook(tmp_path / "data" / "candidaturas.xlsx")["Vagas"]
         assert sheet.freeze_panes == "A2"
-        assert sheet.auto_filter.ref == "A1:R2"
+        assert sheet.auto_filter.ref == "A1:S2"
+
+    def test_shows_external_job_ready_to_apply(self, writer, tmp_path):
+        pending = application(
+            status="pendente_aplicar_manualmente",
+            apply_type="site_externo",
+            external_apply_url="https://empresa.example/vaga",
+        )
+
+        writer.write([pending], [])
+
+        sheet = load_workbook(tmp_path / "data" / "candidaturas.xlsx")["Vagas"]
+        headers = [cell.value for cell in sheet[1]]
+        row = {header: cell for header, cell in zip(headers, sheet[2], strict=True)}
+        assert row["Status"].value == "Pendente – aplicar manualmente"
+        assert row["Candidatura"].value == "Site da empresa"
+        assert row["Link para aplicar"].value == "Abrir"
+        assert row["Link para aplicar"].hyperlink.target == "https://empresa.example/vaga"
+        assert row["CV"].hyperlink.target == "cvs/2026-10-29_Empresa-X_Dev-Junior.pdf"
+
+    def test_leaves_the_apply_link_empty_for_other_jobs(self, writer, tmp_path):
+        writer.write([application()], [])
+
+        sheet = load_workbook(tmp_path / "data" / "candidaturas.xlsx")["Vagas"]
+        headers = [cell.value for cell in sheet[1]]
+        row = {header: cell for header, cell in zip(headers, sheet[2], strict=True)}
+        assert row["Link para aplicar"].value is None and row["Link para aplicar"].hyperlink is None
 
     def test_shows_linkedin_details_and_skipped_jobs_without_resume(self, writer, tmp_path):
         skipped = application(

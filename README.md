@@ -34,6 +34,10 @@ Com os comandos `login` e `buscar` em execução, o navegador pode ser acompanha
 
 A varredura respeita os intervalos de `config/config.json`, incluindo pausas longas, então pode levar vários minutos sem novas mensagens.
 
+### Vagas externas
+
+Vagas sem Candidatura Simplificada recebem o CV normalmente e entram na aba **Vagas** da planilha com o status `Pendente – aplicar manualmente`. Filtre por esse status e use a coluna **Link para aplicar** para abrir o site da empresa e **CV** para pegar o PDF daquela vaga. Se o link não tiver sido encontrado, a coluna **Link da vaga** leva ao anúncio no LinkedIn.
+
 ### Onde ficam os resultados
 
 | Arquivo | Conteúdo |

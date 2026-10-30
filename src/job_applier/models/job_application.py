@@ -8,6 +8,7 @@ from job_applier.models.base import NonEmptyText, StrictModel
 
 class ApplicationStatus(StrEnum):
     CV_GENERATED = "cv_gerado"
+    MANUAL_APPLICATION_PENDING = "pendente_aplicar_manualmente"
     APPLIED = "candidatura_enviada"
     SKIPPED = "ignorada"
     FAILED = "erro"
@@ -31,6 +32,7 @@ class JobApplication(StrictModel):
     missing_terms: tuple[str, ...] = ()
     resume_path: str | None = None
     apply_type: str | None = None
+    external_apply_url: str | None = None
     applicants: int | None = None
     posted_on: date | None = None
     status: ApplicationStatus = ApplicationStatus.CV_GENERATED
