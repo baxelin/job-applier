@@ -1,5 +1,5 @@
 from job_applier.linkedin.search_results_parser import SearchResultsParser
-from tests.linkedin.pages import search_page
+from tests.linkedin.pages import current_search_page, search_page
 
 
 def ids(html: str) -> list[str]:
@@ -33,3 +33,20 @@ class TestSearchResultsParser:
 
         assert card.title is None
         assert card.text == "Vaga Empresa"
+
+
+class TestCurrentLayoutSearchResults:
+    def test_lists_cards_identified_by_componentkey_without_repetition(self):
+        html = current_search_page(("30", "Vaga A", "Empresa A"), ("10", "Vaga B", "Empresa B"))
+
+        assert ids(html) == ["30", "10"]
+
+    def test_card_text_includes_the_company(self):
+        [card] = SearchResultsParser().cards(current_search_page(("7", "Desenvolvedor Júnior", "BairesDev")))
+
+        assert "BairesDev" in card.text
+
+    def test_card_title_comes_from_the_dismiss_button(self):
+        [card] = SearchResultsParser().cards(current_search_page(("7", "Desenvolvedor Python Sênior", "Empresa X")))
+
+        assert card.title == "Desenvolvedor Python Sênior"

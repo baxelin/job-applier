@@ -72,3 +72,18 @@ def search_page(*jobs: str | tuple[str, str, str]) -> str:
             f"<span>{company}</span><span>São Paulo, SP</span></div></li>"
         )
     return f'<html><body><div class="jobs-search-results-list"><ul>{"".join(cards)}</ul></div></body></html>'
+
+
+def current_search_page(*jobs: tuple[str, str, str]) -> str:
+    """Busca no layout de 2026: card é um div com componentkey e sem link; cada vaga é (id, título, empresa)."""
+    cards = "".join(
+        f'<div data-display-contents="true">'
+        f'<div role="button" componentkey="job-card-component-ref-{job_id}">'
+        f'<div componentkey="job-card-component-ref-{job_id}">'
+        f'<p class="b0ak8d"><span>{title} (Vaga verificada)</span><span aria-hidden="true">{title}</span></p>'
+        f'<p class="b0ak3r">{company}</p><p>Brasil (Remoto)</p>'
+        f'<button aria-label="Fechar vaga de {title}" type="button"></button>'
+        f"</div></div></div>"
+        for job_id, title, company in jobs
+    )
+    return f'<html><body><div componentkey="SearchResultsMainContent">{cards}</div></body></html>'

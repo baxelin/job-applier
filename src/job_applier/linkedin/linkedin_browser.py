@@ -2,6 +2,7 @@ import logging
 import random
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
@@ -42,7 +43,11 @@ class LinkedInBrowser(JobBrowser):
     _FEED_URL = "https://www.linkedin.com/feed/"
     _LOGGED_IN_URL_PARTS = ("/feed", "/jobs", "/in/", "/mynetwork")
     _CONTENT_TIMEOUT_MS = 15_000
-    _JOB_CONTENT = "[componentkey^='JobDetails_AboutTheJob_'], #job-details, .show-more-less-html__markup, h1"
+    _JOB_SECTION = "[componentkey^='JobDetails_AboutTheJob_']"
+    _JOB_DESCRIPTION = (
+        "[componentkey^='JobDetails_AboutTheJob_'] [data-testid='expandable-text-box'], "
+        "#job-details, .show-more-less-html__markup"
+    )
     _SCROLL_PAUSE_MS = (400, 900)
     _SCROLL_RESULTS_SCRIPT = """
         () => {
@@ -58,11 +63,19 @@ class LinkedInBrowser(JobBrowser):
         }
     """
 
-    def __init__(self, profile_dir: Path, snapshots_dir: Path, headless: bool = False, scroll_steps: int = 10) -> None:
+    def __init__(
+        self,
+        profile_dir: Path,
+        snapshots_dir: Path,
+        headless: bool = False,
+        scroll_steps: int = 10,
+        job_url_for: Callable[[str], str] = JobPosting.url_for,
+    ) -> None:
         self._profile_dir = profile_dir
         self._snapshots_dir = snapshots_dir
         self._headless = headless
         self._scroll_steps = scroll_steps
+        self._job_url_for = job_url_for
         self._playwright: Playwright | None = None
         self._context: BrowserContext | None = None
         self._page: Page | None = None
@@ -89,12 +102,8 @@ class LinkedInBrowser(JobBrowser):
             self._playwright.stop()
 
     def open(self, url: str, wait_for: str = "body") -> PageSnapshot:
-        page = self._current_page()
-        page.goto(url, wait_until="domcontentloaded")
-        try:
-            page.wait_for_selector(wait_for, timeout=self._CONTENT_TIMEOUT_MS)
-        except PlaywrightTimeoutError:
-            logger.info("A página não mostrou '%s' a tempo: %s", wait_for, page.url)
+        self._current_page().goto(url, wait_until="domcontentloaded")
+        self._wait_for(wait_for)
         return self._snapshot()
 
     def open_search(self, url: str) -> PageSnapshot:
@@ -106,7 +115,13 @@ class LinkedInBrowser(JobBrowser):
         return self._snapshot()
 
     def open_job(self, linkedin_id: str) -> PageSnapshot:
-        return self.open(JobPosting.url_for(linkedin_id), wait_for=self._JOB_CONTENT)
+        """A seção "Sobre a vaga" nasce como esqueleto vazio e só é preenchida quando fica visível,
+        então rola até ela e espera o texto da descrição, não apenas o contêiner."""
+        self._current_page().goto(self._job_url_for(linkedin_id), wait_until="domcontentloaded")
+        if self._wait_for(self._JOB_SECTION):
+            self._current_page().locator(self._JOB_SECTION).first.scroll_into_view_if_needed()
+        self._wait_for(self._JOB_DESCRIPTION)
+        return self._snapshot()
 
     def save_snapshot(self, name: str) -> Path:
         self._snapshots_dir.mkdir(parents=True, exist_ok=True)
@@ -130,6 +145,15 @@ class LinkedInBrowser(JobBrowser):
                 return True
             time.sleep(poll_seconds)
         return False
+
+    def _wait_for(self, selector: str) -> bool:
+        page = self._current_page()
+        try:
+            page.wait_for_selector(selector, timeout=self._CONTENT_TIMEOUT_MS)
+        except PlaywrightTimeoutError:
+            logger.info("A página não mostrou '%s' a tempo: %s", selector, page.url)
+            return False
+        return True
 
     def _is_logged_in_url(self, url: str) -> bool:
         return any(part in url for part in self._LOGGED_IN_URL_PARTS)

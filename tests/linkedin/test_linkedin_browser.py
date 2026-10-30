@@ -31,6 +31,26 @@ LAZY_SEARCH_PAGE = """
 """
 
 
+SKELETON_JOB_PAGE = """
+<html><head><meta charset="utf-8"><title>Desenvolvedor Júnior | Empresa X | LinkedIn</title></head><body>
+  <h1>Desenvolvedor Júnior</h1>
+  <div style="height: 2000px"></div>
+  <div componentkey="JobDetails_AboutTheJob_77"><div style="height: 200px"></div></div>
+  <script>
+    // Imita o LinkedIn: a seção "Sobre a vaga" só é preenchida depois que aparece na tela
+    const section = document.querySelector("[componentkey^='JobDetails_AboutTheJob_']");
+    new IntersectionObserver((entries, observer) => {
+      if (!entries[0].isIntersecting) return;
+      observer.disconnect();
+      setTimeout(() => {
+        section.innerHTML = '<span data-testid="expandable-text-box"><p>Vaga com Python.</p></span>';
+      }, 500);
+    }).observe(section);
+  </script>
+</body></html>
+"""
+
+
 @pytest.fixture
 def browser(tmp_path):
     with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, scroll_steps=8) as opened:
@@ -55,6 +75,13 @@ class TestLinkedInBrowser:
         snapshot = browser.open_search(local_page(tmp_path, "busca.html", LAZY_SEARCH_PAGE))
 
         assert [card.linkedin_id for card in SearchResultsParser().cards(snapshot.html)] == ["1", "2", "3", "4"]
+
+    def test_job_page_waits_until_the_description_skeleton_is_filled(self, tmp_path):
+        page = local_page(tmp_path, "vaga.html", SKELETON_JOB_PAGE)
+        with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, job_url_for=lambda _: page) as browser:
+            snapshot = browser.open_job("77")
+
+        assert "Vaga com Python." in snapshot.text
 
     def test_saves_html_and_screenshot_for_diagnosis(self, browser, tmp_path):
         browser.open(local_page(tmp_path, "vaga.html", job_page()))
