@@ -22,9 +22,10 @@ class JobPageParser:
     """Lê a página de uma vaga do LinkedIn e monta um JobPosting.
 
     O layout atual (2026) usa classes CSS embaralhadas que mudam a cada versão do site, então a
-    leitura se apoia em âncoras estáveis: o <title> da página, os aria-labels e os componentkey
-    com o id da vaga. Os seletores do layout antigo e da página de visitante ficam como alternativa.
-    Quando o LinkedIn mudar o layout, basta acrescentar o novo seletor no início da lista do campo.
+    leitura se apoia no que a pessoa vê: o <title> da página, os aria-labels e o título "Sobre a vaga".
+    Identificadores internos como componentkey aparecem ou somem na mesma versão do site, então
+    não servem de âncora obrigatória. Os seletores do layout antigo e da página de visitante ficam
+    como alternativa.
     """
 
     _TITLE = (
@@ -40,8 +41,9 @@ class JobPageParser:
         ".jobs-unified-top-card__company-name",
         ".topcard__org-name-link",
     )
+    _DESCRIPTION_HEADINGS = frozenset({"sobre a vaga", "about the job"})
+    _TEXT_BOX_TESTID = "expandable-text-box"
     _DESCRIPTION = (
-        "[componentkey^='JobDetails_AboutTheJob_'] [data-testid='expandable-text-box']",
         "#job-details",
         ".jobs-description__content",
         ".jobs-description-content__text",
@@ -110,13 +112,25 @@ class JobPageParser:
     def _description(self, soup: BeautifulSoup) -> str | None:
         for button in soup.select(self._EXPAND_BUTTONS):
             button.decompose()
-        description = self._first_text(soup, self._DESCRIPTION, keep_lines=True)
+        box = self._description_box(soup)
+        description = self._text_of(box, keep_lines=True) if box else self._first_text(soup, self._DESCRIPTION, True)
         if not description:
             return None
         lines = description.splitlines()
         while lines and lines[-1].casefold() in self._EXPAND_LEFTOVERS:
             lines.pop()
         return "\n".join(lines) or None
+
+    def _description_box(self, soup: BeautifulSoup) -> Tag | None:
+        """A caixa de texto logo abaixo do título "Sobre a vaga", antes do título da seção seguinte."""
+        for heading in soup.find_all("h2"):
+            if heading.get_text(" ", strip=True).casefold() in self._DESCRIPTION_HEADINGS:
+                following = heading.find_next(self._is_heading_or_text_box)
+                return following if following and following.name != "h2" else None
+        return None
+
+    def _is_heading_or_text_box(self, tag: Tag) -> bool:
+        return tag.name == "h2" or tag.get("data-testid") == self._TEXT_BOX_TESTID
 
     def _top_card(self, soup: BeautifulSoup) -> str:
         """Linha "Local · há N dias · N candidatos": a primeira com "·" fora do bloco de vagas semelhantes."""

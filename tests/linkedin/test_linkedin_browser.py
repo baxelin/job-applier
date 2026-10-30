@@ -31,43 +31,86 @@ LAZY_SEARCH_PAGE = """
 """
 
 
-SKELETON_JOB_PAGE = """
+DESCRIPTION_HTML = '<h2>Sobre a vaga</h2><span data-testid="expandable-text-box"><p>Vaga com Python.</p></span>'
+
+
+# A coluna tem rolagem própria, como no LinkedIn: rolar o documento não mostraria a seção
+SKELETON_JOB_PAGE = f"""
 <html><head><meta charset="utf-8"><title>Desenvolvedor Júnior | Empresa X | LinkedIn</title></head><body>
-  <h1>Desenvolvedor Júnior</h1>
-  <div style="height: 2000px"></div>
-  <div componentkey="JobDetails_AboutTheJob_77"><div style="height: 200px"></div></div>
+  <main id="scroller" style="height: 500px; overflow-y: auto">
+    <div data-testid="lazy-column">
+      <h1>Desenvolvedor Júnior</h1>
+      <div style="height: 2000px"></div>
+      <div id="about"><div style="height: 200px"></div></div>
+      <div style="height: 2000px"></div>
+    </div>
+  </main>
   <script>
     // Imita o LinkedIn: a seção "Sobre a vaga" só é preenchida depois que aparece na tela
-    const section = document.querySelector("[componentkey^='JobDetails_AboutTheJob_']");
-    new IntersectionObserver((entries, observer) => {
+    const section = document.getElementById('about');
+    new IntersectionObserver((entries, observer) => {{
       if (!entries[0].isIntersecting) return;
       observer.disconnect();
-      setTimeout(() => {
-        section.innerHTML = '<span data-testid="expandable-text-box"><p>Vaga com Python.</p></span>';
-      }, 500);
-    }).observe(section);
+      setTimeout(() => {{ section.innerHTML = '{DESCRIPTION_HTML}'; }}, 500);
+    }}).observe(section);
   </script>
 </body></html>
 """
 
 
-RECREATED_SECTION_JOB_PAGE = """
+READY_DESCRIPTION_JOB_PAGE = f"""
+<html><head><meta charset="utf-8"></head><body>
+  <h1>Desenvolvedor Júnior</h1>
+  <div>{DESCRIPTION_HTML}</div>
+</body></html>
+"""
+
+
+TEXT_ARRIVES_IN_PARTS_JOB_PAGE = """
+<html><head><meta charset="utf-8"></head><body>
+  <h1>Desenvolvedor Júnior</h1>
+  <h2>Sobre a vaga</h2>
+  <span data-testid="expandable-text-box" id="box"><p>Responsabilidades</p></span>
+  <script>
+    // Imita o LinkedIn: o início do texto aparece primeiro e as listas chegam depois
+    setTimeout(() => {
+      document.getElementById('box').insertAdjacentHTML('beforeend', '<ul><li>Vaga com Python.</li></ul>');
+    }, 800);
+  </script>
+</body></html>
+"""
+
+
+COMPANY_LOADS_FIRST_JOB_PAGE = f"""
+<html><head><meta charset="utf-8"></head><body>
+  <h1>Desenvolvedor Júnior</h1>
+  <div id="about"></div>
+  <h2>Sobre a empresa</h2>
+  <span data-testid="expandable-text-box"><p>Texto institucional.</p></span>
+  <script>
+    setTimeout(() => {{ document.getElementById('about').innerHTML = '{DESCRIPTION_HTML}'; }}, 2500);
+  </script>
+</body></html>
+"""
+
+
+RECREATED_SECTION_JOB_PAGE = f"""
 <html><head><meta charset="utf-8"></head><body>
   <h1>Desenvolvedor Júnior</h1>
   <div style="height: 2000px"></div>
-  <div componentkey="JobDetails_AboutTheJob_77"><div style="height: 200px"></div></div>
+  <div id="about"><div style="height: 200px"></div></div>
   <script>
     // Imita o LinkedIn: enquanto carrega, a seção é trocada por uma cópia várias vezes
     let swaps = 0;
-    const timer = setInterval(() => {
-      const section = document.querySelector("[componentkey^='JobDetails_AboutTheJob_']");
-      if (++swaps < 60) {
+    const timer = setInterval(() => {{
+      const section = document.getElementById('about');
+      if (++swaps < 60) {{
         section.replaceWith(section.cloneNode(true));
         return;
-      }
+      }}
       clearInterval(timer);
-      section.innerHTML = '<span data-testid="expandable-text-box"><p>Vaga com Python.</p></span>';
-    }, 5);
+      section.innerHTML = '{DESCRIPTION_HTML}';
+    }}, 5);
   </script>
 </body></html>
 """
@@ -98,15 +141,25 @@ class TestLinkedInBrowser:
 
         assert [card.linkedin_id for card in SearchResultsParser().cards(snapshot.html)] == ["1", "2", "3", "4"]
 
-    def test_job_page_waits_until_the_description_skeleton_is_filled(self, tmp_path):
-        page = local_page(tmp_path, "vaga.html", SKELETON_JOB_PAGE)
-        with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, job_url_for=lambda _: page) as browser:
-            snapshot = browser.open_job("77")
-
-        assert "Vaga com Python." in snapshot.text
-
-    def test_job_page_tolerates_the_section_being_recreated_while_loading(self, tmp_path):
-        page = local_page(tmp_path, "vaga.html", RECREATED_SECTION_JOB_PAGE)
+    @pytest.mark.parametrize(
+        "html",
+        [
+            SKELETON_JOB_PAGE,
+            READY_DESCRIPTION_JOB_PAGE,
+            TEXT_ARRIVES_IN_PARTS_JOB_PAGE,
+            COMPANY_LOADS_FIRST_JOB_PAGE,
+            RECREATED_SECTION_JOB_PAGE,
+        ],
+        ids=[
+            "esqueleto-preenchido-ao-rolar",
+            "descricao-ja-pronta",
+            "texto-chega-em-partes",
+            "empresa-carrega-antes",
+            "secao-recriada",
+        ],
+    )
+    def test_job_page_waits_for_the_description_in_every_loading_state(self, tmp_path, html):
+        page = local_page(tmp_path, "vaga.html", html)
         with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, job_url_for=lambda _: page) as browser:
             snapshot = browser.open_job("77")
 

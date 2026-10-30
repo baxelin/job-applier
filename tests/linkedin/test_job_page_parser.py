@@ -26,14 +26,32 @@ class TestCurrentLayout:
         assert posting.posted_on == date(2026, 10, 26)
         assert posting.applicants == 100
 
-    def test_reads_description_without_the_expand_button(self):
-        description = parse(current_job_page()).description.text
+    @pytest.mark.parametrize("section_attributes", ["", 'componentkey="JobDetails_AboutTheJob_123"'])
+    def test_reads_description_without_the_expand_button(self, section_attributes):
+        description = parse(current_job_page(about_section_attributes=section_attributes)).description.text
 
         assert description.splitlines() == [
             "A Jungle Gaming cria jogos. Procuramos pessoa com React e TypeScript.",
             "Requisitos:",
             "Git",
         ]
+
+    def test_reads_the_description_under_its_english_heading(self):
+        html = current_job_page().replace("Sobre a vaga", "About the job")
+
+        assert parse(html).description.text.startswith("A Jungle Gaming cria jogos.")
+
+    def test_never_uses_the_company_section_as_the_description(self):
+        html = """
+        <html><head><title>Vaga | Empresa X | LinkedIn</title></head><body>
+          <h2>Sobre a vaga</h2>
+          <h2>Sobre a empresa</h2>
+          <span data-testid="expandable-text-box"><p>Texto institucional.</p></span>
+        </body></html>
+        """
+
+        with pytest.raises(JobExtractionError, match="descrição"):
+            parse(html)
 
     def test_detects_external_application_by_aria_label(self):
         assert parse(current_job_page()).apply_type is ApplyType.EXTERNAL

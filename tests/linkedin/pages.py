@@ -33,8 +33,9 @@ def current_job_page(
     company: str = "Jungle Gaming",
     top_line: str = "Brasil · há 3 dias · Mais de 100 pessoas clicaram em Candidate-se",
     apply_label: str = "Candidatar-se no site da empresa",
+    about_section_attributes: str = "",
 ) -> str:
-    """Layout de 2026: classes embaralhadas; âncoras estáveis em <title>, aria-label e componentkey."""
+    """Layout de 2026: classes embaralhadas; âncoras estáveis em <title>, aria-label e título "Sobre a vaga"."""
     return f"""
     <html><head><title>(2) {title} | {company} | LinkedIn</title></head><body>
       <div class="b0alro b0aayf">
@@ -45,14 +46,18 @@ def current_job_page(
         <a class="b0alko" aria-label="{apply_label}" href="https://empresa.example/vaga">
           <span>Candidatar-se</span></a>
       </div>
-      <div componentkey="JobDetails_AboutTheJob_{job_id}">
-        <h2 class="b0ak8d">Sobre a vaga</h2>
-        <span data-testid="expandable-text-box">
+      <div {about_section_attributes}>
+        <div><h2 class="b0ak8d">Sobre a vaga</h2></div>
+        <span data-testid="expandable-text-box" tabindex="-1">
           <p>A {company} cria jogos. Procuramos pessoa com <strong>React</strong> e TypeScript.</p>
           <p>Requisitos:<br>Git</p>
           <span>…</span>
           <button data-testid="expandable-text-button">mais</button>
         </span>
+      </div>
+      <div componentkey="JobDetails_AboutTheCompany_{job_id}">
+        <h2 class="b0ak8d">Sobre a empresa</h2>
+        <span data-testid="expandable-text-box" tabindex="-1"><p>Texto institucional da {company}.</p></span>
       </div>
       <div componentkey="JobDetailsSimilarJobsSlot_{job_id}">
         <p><span>Outra vaga</span> · <span>há 1 dia</span> · <span>5 pessoas clicaram em Candidate-se</span></p>
