@@ -34,6 +34,7 @@ class CommandLine:
     def run(self, arguments: Sequence[str]) -> int:
         parsed = self._parser().parse_args(arguments)
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%d/%m %H:%M:%S")
+        logging.getLogger("weasyprint").setLevel(logging.WARNING)
         match parsed.command:
             case "cv":
                 return self._generate_resumes_command().run(parsed.paths)

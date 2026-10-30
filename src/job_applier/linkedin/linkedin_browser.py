@@ -48,10 +48,12 @@ class LinkedInBrowser(JobBrowser):
         "[componentkey^='JobDetails_AboutTheJob_'] [data-testid='expandable-text-box'], "
         "#job-details, .show-more-less-html__markup"
     )
+    _SEARCH_CARD = "[componentkey^='job-card-component-ref-'], [data-job-id], [data-occludable-job-id]"
     _SCROLL_PAUSE_MS = (400, 900)
+    _SCROLL_INTO_VIEW_SCRIPT = "selector => document.querySelector(selector)?.scrollIntoView({block: 'center'})"
     _SCROLL_RESULTS_SCRIPT = """
-        () => {
-            const card = document.querySelector('[data-job-id], [data-occludable-job-id]');
+        cardSelector => {
+            const card = document.querySelector(cardSelector);
             let element = card;
             while (element && element !== document.body) {
                 const style = getComputedStyle(element);
@@ -107,19 +109,23 @@ class LinkedInBrowser(JobBrowser):
         return self._snapshot()
 
     def open_search(self, url: str) -> PageSnapshot:
-        self.open(url, wait_for="[data-job-id], [data-occludable-job-id], a[href*='/jobs/view/']")
+        self.open(url, wait_for=f"{self._SEARCH_CARD}, a[href*='/jobs/view/']")
         page = self._current_page()
         for _ in range(self._scroll_steps):
-            page.evaluate(self._SCROLL_RESULTS_SCRIPT)
+            page.evaluate(self._SCROLL_RESULTS_SCRIPT, self._SEARCH_CARD)
             page.wait_for_timeout(random.randint(*self._SCROLL_PAUSE_MS))
         return self._snapshot()
 
     def open_job(self, linkedin_id: str) -> PageSnapshot:
         """A seção "Sobre a vaga" nasce como esqueleto vazio e só é preenchida quando fica visível,
-        então rola até ela e espera o texto da descrição, não apenas o contêiner."""
-        self._current_page().goto(self._job_url_for(linkedin_id), wait_until="domcontentloaded")
+        então rola até ela e espera o texto da descrição, não apenas o contêiner.
+
+        A rolagem é feita num único passo em JavaScript porque o LinkedIn recria a seção enquanto
+        carrega; segurar uma referência ao elemento (locator) falha quando ele sai do DOM."""
+        page = self._current_page()
+        page.goto(self._job_url_for(linkedin_id), wait_until="domcontentloaded")
         if self._wait_for(self._JOB_SECTION):
-            self._current_page().locator(self._JOB_SECTION).first.scroll_into_view_if_needed()
+            page.evaluate(self._SCROLL_INTO_VIEW_SCRIPT, self._JOB_SECTION)
         self._wait_for(self._JOB_DESCRIPTION)
         return self._snapshot()
 

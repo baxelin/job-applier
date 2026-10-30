@@ -13,6 +13,7 @@ from job_applier.matching.word_filter import WordFilter
 from job_applier.models.automation_settings import AutomationSettings, SearchQuery
 from job_applier.models.job_application import ScanStatus
 from job_applier.models.job_posting import ApplyType, JobPosting
+from job_applier.resume.pdf_exporter import PdfExportError
 from job_applier.resume.resume_generator import JobEvaluation, ResumeGenerator
 from job_applier.storage.application_repository import ApplicationRepository
 from job_applier.storage.application_tracker import ApplicationTracker
@@ -44,6 +45,7 @@ class JobScanner:
 
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
     ou quando várias páginas seguidas não forem reconhecidas (provável mudança de layout).
+    Um erro inesperado também encerra a varredura, mas mantendo a contagem do que já foi feito.
     """
 
     def __init__(
@@ -90,6 +92,11 @@ class JobScanner:
         except SessionBlockedError as blocked:
             snapshot = self._browser.save_snapshot("bloqueio")
             return self._result(ScanStatus.STOPPED, f"{blocked.reason} Página salva em {snapshot}.")
+        except PdfExportError:
+            raise
+        except Exception as error:
+            logger.exception("Erro inesperado durante a varredura.")
+            return self._result(ScanStatus.STOPPED, f"Erro inesperado: {error!r}")
         return self._result(ScanStatus.COMPLETED, "Todas as buscas foram percorridas.")
 
     def _scan_search(self, search: SearchQuery) -> None:

@@ -51,6 +51,28 @@ SKELETON_JOB_PAGE = """
 """
 
 
+RECREATED_SECTION_JOB_PAGE = """
+<html><head><meta charset="utf-8"></head><body>
+  <h1>Desenvolvedor Júnior</h1>
+  <div style="height: 2000px"></div>
+  <div componentkey="JobDetails_AboutTheJob_77"><div style="height: 200px"></div></div>
+  <script>
+    // Imita o LinkedIn: enquanto carrega, a seção é trocada por uma cópia várias vezes
+    let swaps = 0;
+    const timer = setInterval(() => {
+      const section = document.querySelector("[componentkey^='JobDetails_AboutTheJob_']");
+      if (++swaps < 60) {
+        section.replaceWith(section.cloneNode(true));
+        return;
+      }
+      clearInterval(timer);
+      section.innerHTML = '<span data-testid="expandable-text-box"><p>Vaga com Python.</p></span>';
+    }, 5);
+  </script>
+</body></html>
+"""
+
+
 @pytest.fixture
 def browser(tmp_path):
     with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, scroll_steps=8) as opened:
@@ -78,6 +100,13 @@ class TestLinkedInBrowser:
 
     def test_job_page_waits_until_the_description_skeleton_is_filled(self, tmp_path):
         page = local_page(tmp_path, "vaga.html", SKELETON_JOB_PAGE)
+        with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, job_url_for=lambda _: page) as browser:
+            snapshot = browser.open_job("77")
+
+        assert "Vaga com Python." in snapshot.text
+
+    def test_job_page_tolerates_the_section_being_recreated_while_loading(self, tmp_path):
+        page = local_page(tmp_path, "vaga.html", RECREATED_SECTION_JOB_PAGE)
         with LinkedInBrowser(tmp_path / "profile", tmp_path / "debug", headless=True, job_url_for=lambda _: page) as browser:
             snapshot = browser.open_job("77")
 

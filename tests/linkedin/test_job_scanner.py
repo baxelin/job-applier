@@ -195,6 +195,21 @@ class TestJobScanner:
         assert browser.snapshots == ["busca", "bloqueio"]
         assert applications.list_all() == []
 
+    def test_unexpected_browser_error_stops_keeping_the_counts(self, make_scanner):
+        class FailingBrowser(FakeBrowser):
+            def open_job(self, linkedin_id: str) -> PageSnapshot:
+                if linkedin_id == "2":
+                    raise RuntimeError("Element is not attached to the DOM")
+                return super().open_job(linkedin_id)
+
+        browser = FailingBrowser([["1", "2", "3"]], {"1": dev_job(), "3": dev_job()})
+
+        result = make_scanner(browser).run()
+
+        assert result.status is ScanStatus.STOPPED
+        assert "Element is not attached to the DOM" in result.reason
+        assert (result.jobs_seen, result.jobs_recorded) == (1, 1)
+
     def test_stops_after_consecutive_unrecognized_pages(self, make_scanner, example_base_data):
         broken = "<html><body><h1>Layout novo</h1></body></html>"
         browser = FakeBrowser([["1", "2", "3", "4"]], {"1": broken, "2": dev_job(), "3": broken, "4": broken})
