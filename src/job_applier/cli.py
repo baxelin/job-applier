@@ -3,18 +3,22 @@ import logging
 from collections.abc import Sequence
 from pathlib import Path
 
+from job_applier.answering.form_answerer import FormAnswerer
 from job_applier.app import Application
 from job_applier.commands.generate_resumes_command import GenerateResumesCommand
 from job_applier.commands.login_command import LoginCommand
 from job_applier.commands.refresh_report_command import RefreshReportCommand
 from job_applier.commands.scan_command import ScanCommand
 from job_applier.config.base_data_loader import BaseDataLoader, BaseDataPaths
+from job_applier.linkedin.easy_apply_filler import EasyApplyFiller
+from job_applier.linkedin.easy_apply_rehearsal import EasyApplyRehearsal
 from job_applier.linkedin.job_scanner import JobScanner
 from job_applier.linkedin.linkedin_browser import JobBrowser, LinkedInBrowser
 from job_applier.linkedin.pacer import Pacer
 from job_applier.models.base_data import BaseData
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
+from job_applier.resume.resume_upload_file import ResumeUploadFileLoader
 from job_applier.storage.application_repository import SqliteApplicationRepository
 from job_applier.storage.application_tracker import ApplicationTracker
 from job_applier.storage.database import Database
@@ -44,6 +48,8 @@ class CommandLine:
                 return self._login_command().run()
             case "buscar":
                 return self._scan_command(parsed.max_jobs).run()
+            case "ensaiar":
+                return self._rehearsal_command(parsed.max_jobs).run()
             case _:
                 return Application().run()
 
@@ -58,6 +64,12 @@ class CommandLine:
         commands.add_parser("login", help="Abre o LinkedIn para login manual (perfil persistente).")
         scan = commands.add_parser("buscar", help="Percorre as buscas do config.json e registra as vagas (sem aplicar).")
         scan.add_argument("--max-vagas", dest="max_jobs", type=int, help="Para depois de abrir N vagas.")
+        rehearsal = commands.add_parser(
+            "ensaiar", help="Preenche os formulários de Candidatura Simplificada e para antes de enviar."
+        )
+        rehearsal.add_argument(
+            "--max-vagas", dest="max_jobs", type=int, default=20, help="Quantas vagas ensaiar (padrão: 20)."
+        )
         return parser
 
     def _generate_resumes_command(self) -> GenerateResumesCommand:
@@ -85,6 +97,32 @@ class CommandLine:
             self._base_data_loader(),
             self._browser,
             scanner_factory,
+            SqliteScanRunRepository(self._database),
+            tracker,
+        )
+
+    def _rehearsal_command(self, max_jobs: int) -> ScanCommand[LinkedInBrowser]:
+        tracker = self._tracker()
+
+        def rehearsal_factory(base_data: BaseData, browser: LinkedInBrowser) -> EasyApplyRehearsal:
+            answerer = FormAnswerer(base_data.answer_book, base_data.resume, base_data.glossary)
+            pacer = Pacer(base_data.settings)
+            return EasyApplyRehearsal(
+                browser,
+                EasyApplyFiller(answerer, pacer),
+                ResumeUploadFileLoader(self._project_root, base_data.resume.contact),
+                tracker,
+                SqliteApplicationRepository(self._database),
+                pacer,
+                self._data_dir / "ensaios",
+                base_data.settings.scan.max_consecutive_extraction_errors,
+                max_jobs=max_jobs,
+            )
+
+        return ScanCommand(
+            self._base_data_loader(),
+            self._browser,
+            rehearsal_factory,
             SqliteScanRunRepository(self._database),
             tracker,
         )

@@ -2,12 +2,13 @@ import sys
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from datetime import datetime
+from typing import Protocol
 
 from job_applier.commands.refresh_report_command import RefreshReportCommand
 from job_applier.config.base_data_loader import BaseDataLoader
 from job_applier.config.json_model_loader import DataFileError
-from job_applier.linkedin.job_scanner import JobScanner, ScanResult
-from job_applier.linkedin.linkedin_browser import JobBrowser
+from job_applier.linkedin.job_scanner import ScanResult
+from job_applier.linkedin.linkedin_browser import JobPageBrowser
 from job_applier.models.base_data import BaseData
 from job_applier.models.job_application import ScanRun, ScanStatus
 from job_applier.resume.pdf_exporter import PdfExportError
@@ -15,14 +16,20 @@ from job_applier.storage.application_tracker import ApplicationTracker
 from job_applier.storage.scan_run_repository import ScanRunRepository
 
 
-class ScanCommand:
-    """Executa a varredura de vagas no LinkedIn (só leitura) e registra a execução com o motivo de término."""
+class BrowserRun(Protocol):
+    """Trabalho feito no navegador do início ao fim: a varredura ou o ensaio."""
+
+    def run(self) -> ScanResult: ...
+
+
+class ScanCommand[BrowserT: JobPageBrowser]:
+    """Executa um trabalho no navegador (varredura ou ensaio) e registra a execução com o motivo de término."""
 
     def __init__(
         self,
         base_data_loader: BaseDataLoader,
-        browser_factory: Callable[[], AbstractContextManager[JobBrowser]],
-        scanner_factory: Callable[[BaseData, JobBrowser], JobScanner],
+        browser_factory: Callable[[], AbstractContextManager[BrowserT]],
+        scanner_factory: Callable[[BaseData, BrowserT], BrowserRun],
         runs: ScanRunRepository,
         tracker: ApplicationTracker,
         now: Callable[[], datetime] = datetime.now,

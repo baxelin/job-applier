@@ -23,3 +23,9 @@ class TestCommandLine:
 
         assert exit_code == 1
         assert "cv_base.json" in capsys.readouterr().err
+
+    def test_rehearsal_command_validates_the_data_before_opening_the_browser(self, tmp_path, capsys):
+        exit_code = CommandLine(project_root=tmp_path).run(["ensaiar", "--max-vagas", "1"])
+
+        assert exit_code == 1
+        assert "cv_base.json" in capsys.readouterr().err
