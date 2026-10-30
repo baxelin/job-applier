@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from enum import StrEnum
 from typing import Annotated
@@ -8,6 +9,8 @@ from job_applier.models.base import StrictModel
 from job_applier.models.job_description import JobDescription
 
 LinkedInJobId = Annotated[str, StringConstraints(pattern=r"^\d+$")]
+
+_JOB_ID_IN_URL = re.compile(r"/jobs/view/(\d+)")
 
 
 class ApplyType(StrEnum):
@@ -30,3 +33,10 @@ class JobPosting(StrictModel):
     @staticmethod
     def url_for(linkedin_id: str) -> str:
         return f"https://www.linkedin.com/jobs/view/{linkedin_id}/"
+
+    @staticmethod
+    def id_from_url(url: str) -> str:
+        match = _JOB_ID_IN_URL.search(url)
+        if match is None:
+            raise ValueError(f"Link sem id de vaga do LinkedIn: {url}")
+        return match.group(1)

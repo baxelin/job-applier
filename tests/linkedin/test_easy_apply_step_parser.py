@@ -219,6 +219,12 @@ class TestResume:
 
         assert step.selected_resume == "CV mais antigo.pdf"
 
+    def test_exposes_the_control_of_each_resume(self, parser):
+        step = parser.parse(modal(resume_step()))
+
+        assert step.resume_names() == ("CV antigo.pdf", "CV mais antigo.pdf")
+        assert step.resume_control("CV mais antigo.pdf") == "_r_12_"
+
     def test_step_without_resume(self, parser):
         step = parser.parse(modal(question_input("Pergunta")))
 

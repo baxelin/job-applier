@@ -11,18 +11,15 @@ from typing import Self
 from playwright.sync_api import BrowserContext, Page, Playwright, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+from job_applier.linkedin.easy_apply_form import ApplicationForm, EasyApplyForm, EasyApplyUnavailableError
 from job_applier.linkedin.page_snapshot import PageSnapshot
 from job_applier.models.job_posting import JobPosting
 
 logger = logging.getLogger(__name__)
 
 
-class JobBrowser(ABC):
-    """O que a varredura precisa de um navegador."""
-
-    @abstractmethod
-    def open_search(self, url: str) -> PageSnapshot:
-        """Abre uma página de busca e rola a lista para carregar todas as vagas."""
+class JobPageBrowser(ABC):
+    """O que todo trabalho no navegador precisa: abrir vagas e guardar páginas para diagnóstico."""
 
     @abstractmethod
     def open_job(self, linkedin_id: str) -> PageSnapshot:
@@ -33,7 +30,23 @@ class JobBrowser(ABC):
         """Salva HTML e screenshot da página atual para diagnóstico; devolve o caminho do HTML."""
 
 
-class LinkedInBrowser(JobBrowser):
+class JobBrowser(JobPageBrowser):
+    """O que a varredura precisa de um navegador."""
+
+    @abstractmethod
+    def open_search(self, url: str) -> PageSnapshot:
+        """Abre uma página de busca e rola a lista para carregar todas as vagas."""
+
+
+class ApplicationBrowser(JobPageBrowser):
+    """O que o preenchimento de candidaturas precisa de um navegador."""
+
+    @abstractmethod
+    def open_application_form(self) -> ApplicationForm:
+        """Abre o formulário da vaga aberta; lança EasyApplyUnavailableError se ela não oferecer um."""
+
+
+class LinkedInBrowser(JobBrowser, ApplicationBrowser):
     """Firefox controlado pelo Playwright com perfil persistente (a sessão do LinkedIn fica salva).
 
     No Docker roda com interface numa tela virtual (Xvfb), visível pelo noVNC em http://localhost:6080.
@@ -54,6 +67,11 @@ class LinkedInBrowser(JobBrowser):
     _TEXT_CHECK_INTERVAL_MS = 500
     _TEXT_STABLE_CHECKS = 4
     _TEXT_MAX_CHECKS = 20
+    _EASY_APPLY_BUTTON = (
+        "button[aria-label*='candidatura simplificada' i], a[aria-label*='candidatura simplificada' i],"
+        "button[aria-label*='easy apply' i], a[aria-label*='easy apply' i]"
+    )
+    _EASY_APPLY_BUTTON_WAIT_MS = 5_000
     _SEARCH_CARD = "[componentkey^='job-card-component-ref-'], [data-job-id], [data-occludable-job-id]"
     _SCROLL_PAUSE_MS = (400, 900)
     _SCROLL_DOWN_SCRIPT = """
@@ -128,6 +146,15 @@ class LinkedInBrowser(JobBrowser):
         else:
             logger.info("A descrição da vaga não apareceu a tempo: %s", page.url)
         return self._snapshot()
+
+    def open_application_form(self) -> ApplicationForm:
+        if not self._appears(self._EASY_APPLY_BUTTON, self._EASY_APPLY_BUTTON_WAIT_MS):
+            raise EasyApplyUnavailableError("A vaga não mostra o botão de Candidatura Simplificada.")
+        page = self._current_page()
+        page.locator(self._EASY_APPLY_BUTTON).first.click()
+        form = EasyApplyForm(page)
+        form.wait_until_ready()
+        return form
 
     def _scroll_until_description_appears(self) -> bool:
         """Na mesma versão do site, a descrição ora já vem pronta, ora nasce como esqueleto vazio que só

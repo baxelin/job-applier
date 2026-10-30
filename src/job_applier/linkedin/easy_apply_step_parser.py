@@ -25,9 +25,23 @@ class EasyApplyStep:
     action: StepAction
     action_label: str | None
     upload_label: str | None
-    offers_resume_choice: bool
-    selected_resume: str | None
+    resumes: tuple[FieldOption, ...]
     errors: tuple[str, ...]
+    text: str
+
+    @property
+    def offers_resume_choice(self) -> bool:
+        return bool(self.resumes)
+
+    @property
+    def selected_resume(self) -> str | None:
+        return next((resume.label for resume in self.resumes if resume.selected), None)
+
+    def resume_names(self) -> tuple[str, ...]:
+        return tuple(resume.label for resume in self.resumes)
+
+    def resume_control(self, name: str) -> str:
+        return next(resume.control for resume in self.resumes if resume.label == name)
 
     def fields_to_answer(self) -> tuple[FormField, ...]:
         return tuple(field for field in self.fields if field.required and field.is_empty())
@@ -72,9 +86,9 @@ class EasyApplyStepParser:
             action=action,
             action_label=action_label,
             upload_label=self._first_label(soup, self._UPLOAD_LABELS),
-            offers_resume_choice=resume_group is not None,
-            selected_resume=self._selected_resume(resume_group),
+            resumes=self._resumes(resume_group),
             errors=self._errors(soup),
+            text=self._text_of(soup),
         )
 
     def _page_count(self, soup: BeautifulSoup) -> tuple[int | None, int | None]:
@@ -106,11 +120,17 @@ class EasyApplyStepParser:
                 return radio.find_parent("fieldset")
         return None
 
-    def _selected_resume(self, group: Tag | None) -> str | None:
+    def _resumes(self, group: Tag | None) -> tuple[FieldOption, ...]:
         if group is None:
-            return None
-        checked = group.select_one(f"{self._RADIOS}[data-live-checked='true']")
-        return self._accessible_name(checked) if checked else None
+            return ()
+        return tuple(
+            FieldOption(
+                label=self._accessible_name(radio),
+                control=str(radio.get("id")),
+                selected=radio.get("data-live-checked") == "true",
+            )
+            for radio in group.select(self._RADIOS)
+        )
 
     @staticmethod
     def _accessible_name(control: Tag) -> str:
