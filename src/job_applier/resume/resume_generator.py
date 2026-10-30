@@ -15,11 +15,30 @@ from job_applier.resume.resume_tailor import ResumeTailor
 
 
 @dataclass(frozen=True)
-class GeneratedResume:
+class JobEvaluation:
+    """Análise da vaga e aderência do candidato, sem gerar CV."""
+
     job: JobDescription
     analysis: JobAnalysis
     fit: FitScore
+
+
+@dataclass(frozen=True)
+class GeneratedResume:
+    evaluation: JobEvaluation
     path: Path
+
+    @property
+    def job(self) -> JobDescription:
+        return self.evaluation.job
+
+    @property
+    def analysis(self) -> JobAnalysis:
+        return self.evaluation.analysis
+
+    @property
+    def fit(self) -> FitScore:
+        return self.evaluation.fit
 
 
 class ResumeGenerator:
@@ -42,8 +61,14 @@ class ResumeGenerator:
         self._exporter = exporter or PdfExporter()
         self._today = today
 
-    def generate(self, job: JobDescription) -> GeneratedResume:
+    def evaluate(self, job: JobDescription) -> JobEvaluation:
         analysis = self._analyzer.analyze(job)
-        html = self._renderer.render(self._tailor.tailor(analysis))
-        path = self._archive.save(self._exporter.export(html), job, self._today())
-        return GeneratedResume(job=job, analysis=analysis, fit=self._fit_scorer.score(analysis), path=path)
+        return JobEvaluation(job=job, analysis=analysis, fit=self._fit_scorer.score(analysis))
+
+    def generate(self, job: JobDescription) -> GeneratedResume:
+        return self.generate_for(self.evaluate(job))
+
+    def generate_for(self, evaluation: JobEvaluation) -> GeneratedResume:
+        html = self._renderer.render(self._tailor.tailor(evaluation.analysis))
+        path = self._archive.save(self._exporter.export(html), evaluation.job, self._today())
+        return GeneratedResume(evaluation=evaluation, path=path)

@@ -7,10 +7,7 @@ from job_applier.resume.pdf_exporter import PdfExportError
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
 from job_applier.storage.application_repository import SqliteApplicationRepository
-from job_applier.storage.application_tracker import ApplicationTracker
-from job_applier.storage.database import Database
-from job_applier.storage.excel_report_writer import ExcelReportWriter
-from job_applier.storage.unknown_question_repository import SqliteUnknownQuestionRepository
+from tests.factories import database_for, tracker_for
 
 
 class FakeBaseDataLoader:
@@ -43,17 +40,7 @@ def write_job(directory: Path) -> Path:
 
 
 def saved_applications(tmp_path: Path) -> SqliteApplicationRepository:
-    return SqliteApplicationRepository(Database(tmp_path / "data" / "job_applier.db"))
-
-
-def tracker(tmp_path: Path) -> ApplicationTracker:
-    database = Database(tmp_path / "data" / "job_applier.db")
-    return ApplicationTracker(
-        SqliteApplicationRepository(database),
-        SqliteUnknownQuestionRepository(database),
-        ExcelReportWriter(tmp_path / "data" / "candidaturas.xlsx", tmp_path),
-        project_root=tmp_path,
-    )
+    return SqliteApplicationRepository(database_for(tmp_path))
 
 
 def command(base_data_loader, tmp_path: Path, exporter) -> GenerateResumesCommand:
@@ -62,7 +49,7 @@ def command(base_data_loader, tmp_path: Path, exporter) -> GenerateResumesComman
         lambda base_data: ResumeGenerator(
             base_data, ResumeArchive(tmp_path / "cvs"), exporter=exporter, today=lambda: date(2026, 10, 29)
         ),
-        tracker(tmp_path),
+        tracker_for(tmp_path),
     )
 
 
