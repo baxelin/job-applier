@@ -97,4 +97,5 @@ def settings_data() -> dict:
             "max_skills": 3,
             "summary_skill_count": 2,
         },
+        "scan": {"max_pages_per_search": 2, "max_consecutive_extraction_errors": 2, "login_timeout_minutes": 5},
     }

@@ -7,6 +7,7 @@
     "minutes": { "minimum": 10, "maximum": 25 }
   },
   "filters": {
+    "posted_within_hours": 168,
     "experience_levels": ["internship", "entry_level", "associate"],
     "workplace_types": ["remote", "hybrid", "on_site"],
     "forbidden_title_words": [
@@ -45,5 +46,10 @@
     "max_projects": 2,
     "max_skills": 14,
     "summary_skill_count": 4
+  },
+  "scan": {
+    "max_pages_per_search": 3,
+    "max_consecutive_extraction_errors": 3,
+    "login_timeout_minutes": 10
   }
 }

@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, HttpUrl, model_validator
 
 from job_applier.models.base import NonEmptyText, StrictModel
 
@@ -43,14 +43,27 @@ class JobFilters(StrictModel):
     experience_levels: list[ExperienceLevel] = Field(min_length=1)
     workplace_types: list[WorkplaceType] = Field(min_length=1)
     forbidden_title_words: list[NonEmptyText] = []
+    posted_within_hours: int | None = Field(default=None, ge=1)
 
 
 class SearchQuery(StrictModel):
-    """Busca de vagas. Sem modalidades próprias, vale o filtro geral (filters.workplace_types)."""
+    """Busca de vagas. Sem modalidades próprias, vale o filtro geral (filters.workplace_types).
+
+    Com url, a busca usa essa URL do LinkedIn como está, ignorando os demais campos.
+    """
 
     keywords: NonEmptyText
     location: NonEmptyText
     workplace_types: list[WorkplaceType] | None = Field(default=None, min_length=1)
+    url: HttpUrl | None = None
+
+
+class ScanSettings(StrictModel):
+    """Varredura de vagas no LinkedIn."""
+
+    max_pages_per_search: int = Field(ge=1)
+    max_consecutive_extraction_errors: int = Field(ge=1)
+    login_timeout_minutes: int = Field(ge=1)
 
 
 class CountRange(StrictModel):
@@ -94,3 +107,4 @@ class AutomationSettings(StrictModel):
     filters: JobFilters
     searches: list[SearchQuery] = Field(min_length=1)
     resume: ResumeSettings
+    scan: ScanSettings
