@@ -4,9 +4,17 @@ services:
     image: job-applier
     environment:
       TZ: America/Sao_Paulo
+    shm_size: "1gb"
+    ports:
+      # noVNC (Firefox do container) acessível só desta máquina: http://localhost:6080/vnc.html
+      - "127.0.0.1:6080:6080"
     volumes:
       - ./credentials:/app/credentials:ro
       - ./config:/app/config:ro
       - ./personal:/app/personal:ro
-      - ./profile:/app/profile
       - ./data:/app/data
+      # Perfil do Firefox (sessão do LinkedIn) num volume do Docker: mais rápido e confiável que pasta do Windows
+      - browser-profile:/app/profile
+
+volumes:
+  browser-profile:
