@@ -61,10 +61,14 @@ def current_job_page(
     """
 
 
-def search_page(*job_ids: str) -> str:
-    cards = "".join(
-        f'<li data-occludable-job-id="{job_id}"><div class="job-card-container" data-job-id="{job_id}">'
-        f'<a href="/jobs/view/{job_id}/?refId=abc">Vaga {job_id}</a></div></li>'
-        for job_id in job_ids
-    )
-    return f'<html><body><div class="jobs-search-results-list"><ul>{cards}</ul></div></body></html>'
+def search_page(*jobs: str | tuple[str, str, str]) -> str:
+    """Página de busca; cada vaga é um id ou uma tupla (id, título, empresa)."""
+    cards = []
+    for job in jobs:
+        job_id, title, company = job if isinstance(job, tuple) else (job, f"Vaga {job}", "Empresa Exemplo")
+        cards.append(
+            f'<li data-occludable-job-id="{job_id}"><div class="job-card-container" data-job-id="{job_id}">'
+            f'<a href="/jobs/view/{job_id}/?refId=abc" aria-label="{title}">{title}</a>'
+            f"<span>{company}</span><span>São Paulo, SP</span></div></li>"
+        )
+    return f'<html><body><div class="jobs-search-results-list"><ul>{"".join(cards)}</ul></div></body></html>'

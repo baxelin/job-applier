@@ -6,7 +6,7 @@ from datetime import date
 from job_applier.linkedin.job_page_parser import JobExtractionError, JobPageParser
 from job_applier.linkedin.linkedin_browser import JobBrowser
 from job_applier.linkedin.pacer import Pacer
-from job_applier.linkedin.search_results_parser import SearchResultsParser
+from job_applier.linkedin.search_results_parser import JobCard, SearchResultsParser
 from job_applier.linkedin.search_url_builder import LinkedInSearchUrlBuilder
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
 from job_applier.matching.word_filter import WordFilter
@@ -38,8 +38,9 @@ class _StopScan(Exception):
 class JobScanner:
     """Percorre as buscas do config.json e registra cada vaga nova com análise e CV, sem se candidatar.
 
-    Vagas de empresas bloqueadas, com título proibido, de suporte ou encerradas são registradas
-    como ignoradas (sem CV), para não serem abertas de novo.
+    Empresas bloqueadas (e títulos proibidos, quando o card mostra o título) são descartadas já na
+    lista de resultados, sem abrir a vaga. O que só aparece depois de abrir (título proibido, suporte,
+    vaga encerrada, empresa bloqueada não detectada no card) é registrado como ignorado, sem CV.
 
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
     ou quando várias páginas seguidas não forem reconhecidas (provável mudança de layout).
@@ -74,6 +75,7 @@ class JobScanner:
         self._jobs_recorded = 0
         self._resumes_left_today = 0
         self._consecutive_extraction_errors = 0
+        self._search_page_saved = False
 
     def run(self) -> ScanResult:
         self._resumes_left_today = self._settings.daily_application_limit - self._applications.count_processed_on(
@@ -96,12 +98,31 @@ class JobScanner:
             self._pacer.between_actions()
             snapshot = self._browser.open_search(self._url_builder.build(search, page))
             self._guard.check(snapshot)
-            job_ids = self._search_parser.job_ids(snapshot.html)
-            if not job_ids:
+            self._save_first_search_page()
+            cards = self._search_parser.cards(snapshot.html)
+            if not cards:
                 return
-            for job_id in job_ids:
-                if not self._applications.exists(JobPosting.url_for(job_id)):
-                    self._scan_job(job_id)
+            for card in cards:
+                if self._applications.exists(JobPosting.url_for(card.linkedin_id)):
+                    continue
+                if reason := self._card_skip_reason(card):
+                    logger.info("Pulada na lista, sem abrir: vaga %s (%s)", card.linkedin_id, reason)
+                    continue
+                self._scan_job(card.linkedin_id)
+
+    def _card_skip_reason(self, card: JobCard) -> str | None:
+        """Descarta pela lista de resultados o que dá para saber sem abrir a vaga."""
+        if company := self._company_filter.first_match_in(card.text):
+            return f"empresa bloqueada: {company}"
+        if card.title and (word := self._title_filter.first_match_in(card.title)):
+            return f"título contém '{word}'"
+        return None
+
+    def _save_first_search_page(self) -> None:
+        """Guarda a primeira página de busca de cada execução, para diagnóstico de mudanças de layout."""
+        if not self._search_page_saved:
+            self._browser.save_snapshot("busca")
+            self._search_page_saved = True
 
     def _scan_job(self, job_id: str) -> None:
         self._ensure_can_continue()

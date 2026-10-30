@@ -54,7 +54,7 @@ class TestLinkedInBrowser:
     def test_scrolls_search_results_to_load_every_card(self, browser, tmp_path):
         snapshot = browser.open_search(local_page(tmp_path, "busca.html", LAZY_SEARCH_PAGE))
 
-        assert SearchResultsParser().job_ids(snapshot.html) == ["1", "2", "3", "4"]
+        assert [card.linkedin_id for card in SearchResultsParser().cards(snapshot.html)] == ["1", "2", "3", "4"]
 
     def test_saves_html_and_screenshot_for_diagnosis(self, browser, tmp_path):
         browser.open(local_page(tmp_path, "vaga.html", job_page()))

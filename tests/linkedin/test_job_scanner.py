@@ -23,7 +23,9 @@ TODAY = date(2026, 10, 29)
 class FakeBrowser(JobBrowser):
     """Simula o LinkedIn: páginas de busca (por número de página) e páginas de vaga (por id)."""
 
-    def __init__(self, search_pages: list[list[str]], job_pages: dict[str, str], job_url: str | None = None) -> None:
+    def __init__(
+        self, search_pages: list[list[str | tuple[str, str, str]]], job_pages: dict[str, str], job_url: str | None = None
+    ) -> None:
         self._search_pages = search_pages
         self._job_pages = job_pages
         self._job_url = job_url
@@ -117,7 +119,32 @@ class TestJobScanner:
         assert notes[JobPosting.url_for("1")] == (ApplicationStatus.SKIPPED, "Título contém 'sênior'", None)
         assert notes[JobPosting.url_for("2")] == (ApplicationStatus.SKIPPED, "Vaga de suporte", None)
 
-    def test_skips_blocked_companies_without_resume(self, make_scanner, applications):
+    def test_discards_blocked_companies_from_the_results_list_without_opening(self, make_scanner, applications):
+        browser = FakeBrowser(
+            [[("1", "Desenvolvedor Júnior", "BairesDev"), ("2", "Desenvolvedor Júnior", "Empresa Boa")]],
+            {"2": dev_job()},
+        )
+
+        make_scanner(browser).run()
+
+        assert browser.opened_jobs == ["2"]
+        assert [item.url for item in applications.list_all()] == [JobPosting.url_for("2")]
+
+    def test_discards_forbidden_titles_from_the_results_list_without_opening(self, make_scanner):
+        browser = FakeBrowser([[("1", "Desenvolvedor Python Pleno", "Empresa X"), "2"]], {"2": dev_job()})
+
+        make_scanner(browser).run()
+
+        assert browser.opened_jobs == ["2"]
+
+    def test_saves_only_the_first_search_page_of_the_run(self, make_scanner):
+        browser = FakeBrowser([["1"], ["2"]], {"1": dev_job(), "2": dev_job("Desenvolvedor Vue Júnior")})
+
+        make_scanner(browser).run()
+
+        assert browser.snapshots == ["busca"]
+
+    def test_skips_blocked_companies_found_only_after_opening(self, make_scanner, applications):
         browser = FakeBrowser([["1"]], {"1": current_job_page(job_id="1", company="BairesDev")})
 
         make_scanner(browser).run()
@@ -165,7 +192,7 @@ class TestJobScanner:
         assert result.status is ScanStatus.STOPPED
         assert "verificação de segurança" in result.reason
         assert browser.opened_jobs == ["1"]
-        assert browser.snapshots == ["bloqueio"]
+        assert browser.snapshots == ["busca", "bloqueio"]
         assert applications.list_all() == []
 
     def test_stops_after_consecutive_unrecognized_pages(self, make_scanner, example_base_data):
@@ -177,5 +204,5 @@ class TestJobScanner:
 
         assert result.status is ScanStatus.STOPPED
         assert "layout do LinkedIn pode ter mudado" in result.reason
-        assert browser.snapshots == ["vaga-1", "vaga-3", "vaga-4"]
+        assert browser.snapshots == ["busca", "vaga-1", "vaga-3", "vaga-4"]
         assert result.jobs_seen == 1
