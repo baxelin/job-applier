@@ -9,7 +9,7 @@ from job_applier.linkedin.pacer import Pacer
 from job_applier.linkedin.search_results_parser import SearchResultsParser
 from job_applier.linkedin.search_url_builder import LinkedInSearchUrlBuilder
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
-from job_applier.matching.title_filter import TitleFilter
+from job_applier.matching.word_filter import WordFilter
 from job_applier.models.automation_settings import AutomationSettings, SearchQuery
 from job_applier.models.job_application import ScanStatus
 from job_applier.models.job_posting import ApplyType, JobPosting
@@ -38,6 +38,9 @@ class _StopScan(Exception):
 class JobScanner:
     """Percorre as buscas do config.json e registra cada vaga nova com análise e CV, sem se candidatar.
 
+    Vagas de empresas bloqueadas, com título proibido, de suporte ou encerradas são registradas
+    como ignoradas (sem CV), para não serem abertas de novo.
+
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
     ou quando várias páginas seguidas não forem reconhecidas (provável mudança de layout).
     """
@@ -65,7 +68,8 @@ class JobScanner:
         self._search_parser = SearchResultsParser()
         self._job_parser = JobPageParser()
         self._guard = SessionGuard()
-        self._title_filter = TitleFilter(settings.filters.forbidden_title_words)
+        self._title_filter = WordFilter(settings.filters.forbidden_title_words)
+        self._company_filter = WordFilter(settings.filters.blocked_companies)
         self._jobs_seen = 0
         self._jobs_recorded = 0
         self._resumes_left_today = 0
@@ -132,7 +136,9 @@ class JobScanner:
         self._jobs_recorded += 1
 
     def _skip_reason(self, posting: JobPosting, evaluation: JobEvaluation) -> str | None:
-        if word := self._title_filter.forbidden_word_in(posting.description.title):
+        if company := self._company_filter.first_match_in(posting.description.company):
+            return f"Empresa bloqueada ({company})"
+        if word := self._title_filter.first_match_in(posting.description.title):
             return f"Título contém '{word}'"
         if evaluation.analysis.is_support_role:
             return "Vaga de suporte"

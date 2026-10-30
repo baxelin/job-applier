@@ -43,6 +43,7 @@ class JobFilters(StrictModel):
     experience_levels: list[ExperienceLevel] = Field(min_length=1)
     workplace_types: list[WorkplaceType] = Field(min_length=1)
     forbidden_title_words: list[NonEmptyText] = []
+    blocked_companies: list[NonEmptyText] = []
     posted_within_hours: int | None = Field(default=None, ge=1)
 
 

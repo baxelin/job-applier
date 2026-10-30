@@ -17,7 +17,8 @@
       "arquiteto", "architect",
       "suporte", "support", "help desk", "helpdesk", "service desk",
       "n1", "n2", "n3", "técnico de informática", "técnico de ti", "field service"
-    ]
+    ],
+    "blocked_companies": ["BairesDev", "Jobol"]
   },
   "searches": [
     { "keywords": "Desenvolvedor Júnior", "location": "São Paulo, SP" },

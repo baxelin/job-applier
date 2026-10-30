@@ -4,10 +4,11 @@ from collections.abc import Sequence
 from job_applier.matching.text_normalizer import TextNormalizer
 
 
-class TitleFilter:
-    """Encontra no título da vaga palavras proibidas (sênior, pleno, suporte...) como palavras inteiras.
+class WordFilter:
+    """Encontra num texto palavras proibidas como palavras inteiras, ignorando maiúsculas e acentos.
 
-    "Sr." bloqueia "Desenvolvedor Sr.", mas "sr" não bloqueia "SRE".
+    Usado no título da vaga ("Sr." bloqueia "Desenvolvedor Sr.", mas "sr" não bloqueia "SRE")
+    e no nome da empresa (blacklist).
     """
 
     def __init__(self, forbidden_words: Sequence[str]) -> None:
@@ -16,6 +17,6 @@ class TitleFilter:
             for word in forbidden_words
         ]
 
-    def forbidden_word_in(self, title: str) -> str | None:
-        normalized = TextNormalizer.normalize(title)
+    def first_match_in(self, text: str) -> str | None:
+        normalized = TextNormalizer.normalize(text)
         return next((word for word, pattern in self._patterns if pattern.search(normalized)), None)

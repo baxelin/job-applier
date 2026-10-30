@@ -14,7 +14,7 @@ from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
 from job_applier.storage.application_repository import SqliteApplicationRepository
 from tests.factories import database_for, tracker_for
-from tests.linkedin.pages import job_page, search_page
+from tests.linkedin.pages import current_job_page, job_page, search_page
 from tests.storage.conftest import application
 
 TODAY = date(2026, 10, 29)
@@ -116,6 +116,27 @@ class TestJobScanner:
         notes = {item.url: (item.status, item.notes, item.resume_path) for item in applications.list_all()}
         assert notes[JobPosting.url_for("1")] == (ApplicationStatus.SKIPPED, "Título contém 'sênior'", None)
         assert notes[JobPosting.url_for("2")] == (ApplicationStatus.SKIPPED, "Vaga de suporte", None)
+
+    def test_skips_blocked_companies_without_resume(self, make_scanner, applications):
+        browser = FakeBrowser([["1"]], {"1": current_job_page(job_id="1", company="BairesDev")})
+
+        make_scanner(browser).run()
+
+        [recorded] = applications.list_all()
+        assert (recorded.status, recorded.notes, recorded.resume_path) == (
+            ApplicationStatus.SKIPPED,
+            "Empresa bloqueada (BairesDev)",
+            None,
+        )
+
+    def test_reads_jobs_in_the_current_linkedin_layout(self, make_scanner, applications):
+        browser = FakeBrowser([["1"]], {"1": current_job_page(job_id="1")})
+
+        result = make_scanner(browser).run()
+
+        [recorded] = applications.list_all()
+        assert result.jobs_recorded == 1
+        assert (recorded.company, recorded.status) == ("Jungle Gaming", ApplicationStatus.CV_GENERATED)
 
     def test_stops_at_the_daily_limit_counting_todays_resumes(self, make_scanner, applications):
         applications.save(application(job_key="antiga", created_at=TODAY.isoformat() + "T08:00:00"))
