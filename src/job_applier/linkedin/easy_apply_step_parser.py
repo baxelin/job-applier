@@ -61,7 +61,7 @@ class EasyApplyStepParser:
     """
 
     ADVANCE_LABELS = frozenset({"avancar", "avaliar", "revisar", "next", "review"})
-    _SUBMIT_LABELS = frozenset({"enviar candidatura", "submit application"})
+    SUBMIT_LABELS = frozenset({"enviar candidatura", "submit application"})
     _UPLOAD_LABELS = frozenset({"carregar curriculo", "upload resume"})
     _PAGE_COUNT = re.compile(r"(\d+)\s+(?:de|of)\s+(\d+)\s+(?:paginas|pages)")
     _CHARACTER_LIMIT = re.compile(r"\d+\s*/\s*(\d+)")
@@ -96,7 +96,7 @@ class EasyApplyStepParser:
         return (int(match.group(1)), int(match.group(2))) if match else (None, None)
 
     def _action(self, soup: BeautifulSoup) -> tuple[StepAction, str | None]:
-        if label := self._first_label(soup, self._SUBMIT_LABELS):
+        if label := self._first_label(soup, self.SUBMIT_LABELS):
             return StepAction.SUBMIT_REACHED, label
         if label := self._first_label(soup, self.ADVANCE_LABELS):
             return StepAction.ADVANCE, label

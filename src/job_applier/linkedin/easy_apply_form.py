@@ -25,10 +25,14 @@ class EasyApplyFormError(Exception):
     """O modal não se comportou como esperado; o preenchimento dessa vaga para aqui."""
 
 
+class EasyApplySubmissionUnconfirmedError(EasyApplyFormError):
+    """O botão de enviar foi clicado, mas a confirmação não apareceu: a vaga precisa ser conferida no site."""
+
+
 class ApplicationForm(ABC):
     """O que o preenchimento precisa de um formulário de candidatura aberto.
 
-    Não existe operação de envio: o formulário só avança até a tela com o botão de enviar.
+    O formulário avança até a tela com o botão de enviar; só submit clica nele, e só nessa tela.
     """
 
     @abstractmethod
@@ -46,6 +50,17 @@ class ApplicationForm(ABC):
     @abstractmethod
     def advance(self, step: EasyApplyStep) -> EasyApplyStep | None:
         """Vai para a próxima tela; devolve None se ela não mudar (normalmente erro de validação)."""
+
+    @abstractmethod
+    def submit(self, step: EasyApplyStep) -> None:
+        """Clica em "Enviar candidatura" na tela final e espera a confirmação do LinkedIn.
+
+        Lança EasyApplySubmissionUnconfirmedError se a confirmação não aparecer.
+        """
+
+    @abstractmethod
+    def close_after_sending(self) -> None:
+        """Fecha a janela de confirmação que aparece depois do envio, se ela existir."""
 
     @abstractmethod
     def close_without_sending(self) -> None:
@@ -82,6 +97,10 @@ class EasyApplyForm(ApplicationForm):
     """
     _FORM_HEIGHT_SCRIPT = "dialog => Math.max(...[...dialog.querySelectorAll('*')].map(item => item.scrollHeight))"
     _CLOSE_BUTTON = re.compile(r"^(Fechar|Dismiss|Close)$")
+    _AFTER_SENDING_BUTTON = re.compile(r"^(Concluído|Concluir|Done|Fechar|Dismiss|Close)$")
+    _SENT_SIGNS = re.compile(
+        r"candidatura (?:foi )?enviada|candidatou-se|application (?:was )?sent|applied \d+ \w+ ago"
+    )
     _DISCARD_BUTTON = re.compile(r"^(Descartar|Discard)$")
     _PDF_MIME_TYPE = "application/pdf"
     _CHECK_INTERVAL_MS = 500
@@ -156,6 +175,37 @@ class EasyApplyForm(ApplicationForm):
             raise EasyApplyFormError(f"Não consegui clicar em '{label}': {error.message}") from error
         return self._settled_step(lambda current: current.identity() != step.identity())
 
+    def submit(self, step: EasyApplyStep) -> None:
+        label = step.action_label or ""
+        is_submit_button = TextNormalizer.normalize(label) in EasyApplyStepParser.SUBMIT_LABELS
+        if step.action is not StepAction.SUBMIT_REACHED or not is_submit_button:
+            raise EasyApplyFormError(f"Recusado: '{label}' não é o botão de enviar a candidatura.")
+        try:
+            self._button(label).click(timeout=self._ACTION_TIMEOUT_MS)
+        except PlaywrightError as error:
+            raise EasyApplyFormError(f"Não consegui clicar em '{label}': {error.message}") from error
+        if not self._sent_confirmation_appears():
+            raise EasyApplySubmissionUnconfirmedError(
+                "Cliquei em enviar, mas o LinkedIn não mostrou a confirmação. Conferir a vaga no site antes de "
+                "tentar de novo."
+            )
+
+    def _sent_confirmation_appears(self) -> bool:
+        for _ in range(self._MAX_CHECKS):
+            self._page.wait_for_timeout(self._CHECK_INTERVAL_MS)
+            if self._SENT_SIGNS.search(TextNormalizer.normalize(self._page.inner_text("body"))):
+                return True
+        return False
+
+    def close_after_sending(self) -> None:
+        """Melhor esforço: a candidatura já foi enviada, então um aviso de confirmação que não fecha não é erro."""
+        buttons = self._page.locator(self._DIALOG).get_by_role("button", name=self._AFTER_SENDING_BUTTON)
+        try:
+            if buttons.count():
+                buttons.first.click(timeout=self._CONFIRMATION_TIMEOUT_MS)
+        except PlaywrightError as error:
+            logger.info("A confirmação do envio não fechou: %s", error.message)
+
     def close_without_sending(self) -> None:
         try:
             self._form().get_by_role("button", name=self._CLOSE_BUTTON).first.click(timeout=self._ACTION_TIMEOUT_MS)
@@ -177,6 +227,9 @@ class EasyApplyForm(ApplicationForm):
         O modal ocupa uma fração da altura da janela, então ela precisa ser maior que o formulário.
         """
         path.parent.mkdir(parents=True, exist_ok=True)
+        if not self._page.locator(self._DIALOG).count():
+            self._page.screenshot(path=path)
+            return
         size = self._page.viewport_size
         form_height = self._form().evaluate(self._FORM_HEIGHT_SCRIPT) + self._SCREENSHOT_MARGIN_PX
         height = round(form_height / self._DIALOG_SHARE_OF_WINDOW)

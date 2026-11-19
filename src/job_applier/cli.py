@@ -1,5 +1,5 @@
 import argparse
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from job_applier.answering.form_answerer import FormAnswerer
@@ -12,9 +12,12 @@ from job_applier.config.base_data_loader import BaseDataLoader, BaseDataPaths
 from job_applier.execution_log import ExecutionLog
 from job_applier.linkedin.easy_apply_filler import EasyApplyFiller
 from job_applier.linkedin.easy_apply_rehearsal import EasyApplyRehearsal
+from job_applier.linkedin.easy_apply_run import EasyApplyRun
+from job_applier.linkedin.easy_apply_submission import EasyApplySubmission
 from job_applier.linkedin.job_scanner import JobScanner
 from job_applier.linkedin.linkedin_browser import JobBrowser, LinkedInBrowser
 from job_applier.linkedin.pacer import Pacer
+from job_applier.models.automation_settings import AutomationSettings
 from job_applier.models.base_data import BaseData
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
@@ -56,6 +59,8 @@ class CommandLine:
                 return self._scan_command(parsed.max_jobs).run()
             case "ensaiar":
                 return self._rehearsal_command(parsed.max_jobs, parsed.retry_pending).run()
+            case "aplicar":
+                return self._submission_command(parsed.max_jobs).run()
             case _:
                 return Application().run()
 
@@ -82,6 +87,10 @@ class CommandLine:
             action="store_true",
             help="Depois das vagas novas, tenta de novo as pendentes de pergunta e as com erro.",
         )
+        submission = commands.add_parser(
+            "aplicar", help="Envia as candidaturas simplificadas, até o limite diário de envios do config.json."
+        )
+        submission.add_argument("--max-vagas", dest="max_jobs", type=int, help="Abre no máximo N vagas.")
         return parser
 
     def _generate_resumes_command(self) -> GenerateResumesCommand:
@@ -114,28 +123,44 @@ class CommandLine:
         )
 
     def _rehearsal_command(self, max_jobs: int, retry_pending: bool) -> ScanCommand[LinkedInBrowser]:
+        return self._easy_apply_command(
+            "ensaios",
+            lambda parts, settings: EasyApplyRehearsal(*parts, max_jobs=max_jobs, retry_pending=retry_pending),
+        )
+
+    def _submission_command(self, max_jobs: int | None) -> ScanCommand[LinkedInBrowser]:
+        return self._easy_apply_command(
+            "envios",
+            lambda parts, settings: EasyApplySubmission(
+                *parts, max_jobs=max_jobs, daily_limit=settings.daily_submission_limit
+            ),
+        )
+
+    def _easy_apply_command(
+        self, evidence_folder: str, build: Callable[[tuple, AutomationSettings], EasyApplyRun]
+    ) -> ScanCommand[LinkedInBrowser]:
+        """Ensaio e envio usam as mesmas peças; muda só o que acontece na tela final."""
         tracker = self._tracker()
 
-        def rehearsal_factory(base_data: BaseData, browser: LinkedInBrowser) -> EasyApplyRehearsal:
+        def factory(base_data: BaseData, browser: LinkedInBrowser) -> EasyApplyRun:
             answerer = FormAnswerer(base_data.answer_book, base_data.resume, base_data.glossary)
             pacer = Pacer(base_data.settings)
-            return EasyApplyRehearsal(
+            parts = (
                 browser,
                 EasyApplyFiller(answerer, pacer),
                 ResumeUploadFileLoader(self._project_root, base_data.resume.contact),
                 tracker,
                 SqliteApplicationRepository(self._database),
                 pacer,
-                self._data_dir / "ensaios",
+                self._data_dir / evidence_folder,
                 base_data.settings.scan.max_consecutive_extraction_errors,
-                max_jobs=max_jobs,
-                retry_pending=retry_pending,
             )
+            return build(parts, base_data.settings)
 
         return ScanCommand(
             self._base_data_loader(),
             self._browser,
-            rehearsal_factory,
+            factory,
             SqliteScanRunRepository(self._database),
             tracker,
         )

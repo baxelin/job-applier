@@ -41,6 +41,7 @@ class JobApplication(StrictModel):
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
+    applied_at: datetime | None = None
 
 
 class UnknownQuestion(StrictModel):

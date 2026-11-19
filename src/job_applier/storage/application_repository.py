@@ -41,13 +41,25 @@ class ApplicationRepository(ABC):
         """
 
     @abstractmethod
+    def list_ready_for_submission(self) -> list[JobApplication]:
+        """Vagas simplificadas com CV a enviar: as que passaram no ensaio primeiro, depois as novas, por aderência."""
+
+    @abstractmethod
+    def count_applied_on(self, day: date) -> int:
+        """Quantas candidaturas foram enviadas no dia."""
+
+    @abstractmethod
+    def mark_applied(self, job_key: str, notes: str, applied_at: datetime) -> None:
+        """Registra a candidatura enviada, com a data do envio."""
+
+    @abstractmethod
     def update_status(self, job_key: str, status: ApplicationStatus, notes: str | None, updated_at: datetime) -> None:
         """Muda a situação da vaga e registra o motivo em observações."""
 
 
 class SqliteApplicationRepository(ApplicationRepository):
     _COLUMNS = tuple(name for name in JobApplication.model_fields if name != "id")
-    _KEPT_ON_UPDATE = frozenset({"job_key", "status", "created_at"})
+    _KEPT_ON_UPDATE = frozenset({"job_key", "status", "created_at", "applied_at"})
     _TERM_COLUMNS = ("matched_terms", "missing_terms")
     _RETRIED_STATUSES = (ApplicationStatus.UNKNOWN_QUESTION_PENDING, ApplicationStatus.FAILED)
     _NO_LIMIT = -1
@@ -120,6 +132,36 @@ class SqliteApplicationRepository(ApplicationRepository):
                 },
             ).fetchall()
         return [self._from_row(row) for row in rows]
+
+    def list_ready_for_submission(self) -> list[JobApplication]:
+        with self._database.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM job_applications
+                WHERE apply_type = :apply_type AND resume_path IS NOT NULL AND status IN (:rehearsed, :new_status)
+                ORDER BY status = :rehearsed DESC, fit_percentage DESC, id
+                """,
+                {
+                    "apply_type": ApplyType.EASY_APPLY.value,
+                    "rehearsed": ApplicationStatus.REHEARSED.value,
+                    "new_status": ApplicationStatus.CV_GENERATED.value,
+                },
+            ).fetchall()
+        return [self._from_row(row) for row in rows]
+
+    def count_applied_on(self, day: date) -> int:
+        with self._database.connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) FROM job_applications WHERE substr(applied_at, 1, 10) = ?", (day.isoformat(),)
+            ).fetchone()
+        return row[0]
+
+    def mark_applied(self, job_key: str, notes: str, applied_at: datetime) -> None:
+        with self._database.connect() as connection:
+            connection.execute(
+                "UPDATE job_applications SET status = ?, notes = ?, updated_at = ?, applied_at = ? WHERE job_key = ?",
+                (ApplicationStatus.APPLIED.value, notes, applied_at.isoformat(), applied_at.isoformat(), job_key),
+            )
 
     def update_status(self, job_key: str, status: ApplicationStatus, notes: str | None, updated_at: datetime) -> None:
         with self._database.connect() as connection:

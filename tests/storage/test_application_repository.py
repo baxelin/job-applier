@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 
@@ -109,3 +109,34 @@ class TestListReadyForEasyApply:
         applications.save(easy_apply("media", fit=50))
 
         assert [item.job_key for item in applications.list_ready_for_easy_apply(2)] == ["alta", "media"]
+
+
+class TestSubmissions:
+    def test_lists_rehearsed_jobs_first_then_new_ones_by_fit(self, applications):
+        applications.save(easy_apply("nova-alta", fit=90))
+        applications.save(easy_apply("ensaiada", fit=10, status=ApplicationStatus.REHEARSED))
+        applications.save(easy_apply("nova-baixa", fit=40))
+        applications.save(easy_apply("pendente", fit=99, status=ApplicationStatus.UNKNOWN_QUESTION_PENDING))
+        applications.save(easy_apply("enviada", fit=99, status=ApplicationStatus.APPLIED))
+
+        listed = [item.job_key for item in applications.list_ready_for_submission()]
+
+        assert listed == ["ensaiada", "nova-alta", "nova-baixa"]
+
+    def test_counts_applications_sent_on_the_day(self, applications):
+        applications.save(easy_apply("ontem"))
+        applications.save(easy_apply("hoje"))
+        applications.mark_applied("ontem", "Enviada", datetime(2026, 10, 29, 23, 0))
+        applications.mark_applied("hoje", "Enviada", datetime(2026, 10, 30, 9, 0))
+
+        assert applications.count_applied_on(date(2026, 10, 30)) == 1
+
+    def test_sending_date_survives_a_new_resume_for_the_same_job(self, applications):
+        applications.save(easy_apply("vaga"))
+        applications.mark_applied("vaga", "Enviada", datetime(2026, 10, 30, 9, 0))
+
+        applications.save(easy_apply("vaga", fit=70))
+
+        [job] = applications.list_all()
+        assert job.applied_at == datetime(2026, 10, 30, 9, 0)
+        assert job.status is ApplicationStatus.APPLIED

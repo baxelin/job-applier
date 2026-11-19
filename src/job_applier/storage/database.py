@@ -94,6 +94,10 @@ class Database:
         UPDATE job_applications SET status = 'pendente_aplicar_manualmente'
         WHERE apply_type = 'site_externo' AND status = 'cv_gerado';
         """,
+        # 4: quando a candidatura foi enviada (o limite diário de envios conta por esta data)
+        """
+        ALTER TABLE job_applications ADD COLUMN applied_at TEXT;
+        """,
     )
 
     def __init__(self, path: Path) -> None:

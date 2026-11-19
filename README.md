@@ -28,11 +28,12 @@ Rode `docker compose build` de novo sempre que o código mudar, porque o código
 | Varrer abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier buscar --max-vagas 7` |
 | Ensaiar as candidaturas sem enviar (padrão: até 20 vagas novas) | `docker compose run --rm --service-ports app python -m job_applier ensaiar --max-vagas 20` |
 | Ensaiar e repetir as vagas pendentes de pergunta ou com erro | `docker compose run --rm --service-ports app python -m job_applier ensaiar --repetir-pendentes` |
+| **Enviar** as candidaturas simplificadas (até o limite diário de envios) | `docker compose run --rm --service-ports app python -m job_applier aplicar` |
 | Gerar CVs a partir de arquivos `.txt` | `docker compose run --rm app python -m job_applier cv data/vagas` |
 | Recriar a planilha a partir do banco | `docker compose run --rm app python -m job_applier planilha` |
 | Rodar os testes | `docker compose run --rm app pytest` |
 
-Com os comandos `login`, `buscar` e `ensaiar` em execução, o navegador pode ser acompanhado em <http://localhost:6080/vnc.html>. O login só precisa ser refeito quando a sessão do LinkedIn expirar.
+Com os comandos `login`, `buscar`, `ensaiar` e `aplicar` em execução, o navegador pode ser acompanhado em <http://localhost:6080/vnc.html>. O login só precisa ser refeito quando a sessão do LinkedIn expirar.
 
 A varredura respeita os intervalos de `config/config.json`, incluindo pausas longas, então pode levar vários minutos sem novas mensagens.
 
@@ -42,7 +43,7 @@ Vagas sem Candidatura Simplificada recebem o CV normalmente e entram na aba **Va
 
 ### Ensaio das candidaturas
 
-O comando `ensaiar` abre cada vaga com Candidatura Simplificada, preenche o formulário, carrega o CV daquela vaga e descarta tudo ao chegar na tela do botão de enviar. **Nada é enviado:** o programa ainda não tem nenhuma operação de envio.
+O comando `ensaiar` abre cada vaga com Candidatura Simplificada, preenche o formulário, carrega o CV daquela vaga e descarta tudo ao chegar na tela do botão de enviar. **Nada é enviado.**
 
 | Status na planilha | O que significa | O que fazer |
 | --- | --- | --- |
@@ -50,7 +51,15 @@ O comando `ensaiar` abre cada vaga com Candidatura Simplificada, preenche o form
 | `Pendente – pergunta sem resposta` | Há pergunta obrigatória sem resposta segura | Responder em `personal/respostas.json`, a partir da aba **Perguntas** |
 | `Erro` | O formulário não se comportou como o esperado | Ver a coluna **Observação** e a página salva em `data/debug/` |
 
-Cada vaga ensaiada ganha uma pasta em `data/ensaios/`, com um print por tela e um `respostas.txt` com o que foi preenchido e o que ficou sem resposta. Vagas pendentes e com erro são tentadas de novo nas próximas execuções, depois das vagas ainda não ensaiadas.
+Cada vaga ensaiada ganha uma pasta em `data/ensaios/`, com um print por tela e um `respostas.txt` com o que foi preenchido e o que ficou sem resposta. Por padrão só entram vagas novas; com `--repetir-pendentes`, as pendentes e as com erro são tentadas de novo depois delas.
+
+### Envio das candidaturas
+
+O comando `aplicar` faz o mesmo percurso do ensaio e, na tela final, clica em **Enviar candidatura**. Entram primeiro as vagas que passaram no ensaio, depois as novas, por aderência, até o limite diário de envios (`daily_submission_limit` no `config.json`, contado pela data do envio).
+
+- Pergunta sem resposta segura: a candidatura não é enviada e a vaga fica pendente, como no ensaio.
+- Cada envio deixa prints, o `respostas.txt` e o print da confirmação em `data/envios/`, e a vaga fica como `Candidatura enviada`.
+- Se o LinkedIn não mostrar a confirmação depois do clique, a execução para e a vaga fica com erro: confira no site antes de tentar de novo, para não enviar a mesma candidatura duas vezes.
 
 ### Onde ficam os resultados
 

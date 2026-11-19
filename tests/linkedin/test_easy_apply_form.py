@@ -3,7 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from job_applier.linkedin.easy_apply_form import EasyApplyForm, EasyApplyFormError, EasyApplyUnavailableError
+from job_applier.linkedin.easy_apply_form import (
+    EasyApplyForm,
+    EasyApplyFormError,
+    EasyApplySubmissionUnconfirmedError,
+    EasyApplyUnavailableError,
+)
 from job_applier.linkedin.easy_apply_step_parser import EasyApplyStepParser, StepAction
 from job_applier.linkedin.linkedin_browser import LinkedInBrowser
 from job_applier.models.form_field import FieldAnswer
@@ -40,6 +45,12 @@ REVIEW_SCREEN = modal(
     buttons=("Enviar candidatura",),
     progress="4 de 4 páginas",
 )
+SENT_CONFIRMATION = """
+<dialog data-testid="dialog" open>
+  <h2>Sua candidatura foi enviada para Empresa X</h2>
+  <button type="button"><span>Concluído</span></button>
+</dialog>
+"""
 CONFIRMATION = """
 <dialog data-testid="dialog" open>
   <button aria-label="Fechar" type="button"></button>
@@ -56,6 +67,7 @@ def fake_linkedin_page(
     selects_upload: bool = True,
     apply_button: bool = True,
     button_opens_form: bool = True,
+    confirms_submission: bool = True,
 ) -> str:
     """Imita a vaga e o modal: telas em sequência, validação, upload pelo seletor de arquivos e descarte.
 
@@ -95,7 +107,11 @@ def fake_linkedin_page(
           if (!button) return;
           const label = button.innerText.trim() || button.getAttribute('aria-label') || '';
           if (button.hasAttribute('data-opens-form')) show();
-          if (label === 'Enviar candidatura') events.textContent += ' ENVIADA';
+          if (label === 'Enviar candidatura') {{
+            events.textContent += ' ENVIADA';
+            if ({json.dumps(confirms_submission)}) root.innerHTML = {json.dumps(SENT_CONFIRMATION)};
+          }}
+          if (label === 'Concluído') root.innerHTML = '';
           if (label === 'Salvar') events.textContent += ' SALVA';
           if (label === 'Avançar' || label === 'Avaliar') {{
             if (isValid()) {{ current += 1; show(); }} else addError();
@@ -258,8 +274,8 @@ class TestAdvancing:
         assert "Este campo é obrigatório" in form.read_step().errors
 
 
-class TestNeverSends:
-    def test_refuses_the_submit_screen(self, open_form):
+class TestSubmitting:
+    def test_advance_refuses_the_submit_screen(self, open_form):
         form = open_form([REVIEW_SCREEN])
 
         step = form.read_step()
@@ -269,11 +285,36 @@ class TestNeverSends:
             form.advance(step)
         assert "ENVIADA" not in form.page_snapshot().text
 
-    def test_form_has_no_operation_that_sends(self, open_form):
+    def test_submit_refuses_a_screen_that_is_not_the_last(self, open_form):
+        form = open_form([CONTACT_SCREEN])
+
+        with pytest.raises(EasyApplyFormError, match="Recusado"):
+            form.submit(form.read_step())
+        assert "ENVIADA" not in form.page_snapshot().text
+
+    def test_sends_and_waits_for_the_confirmation(self, open_form):
         form = open_form([REVIEW_SCREEN])
 
-        assert not [name for name in dir(form) if "send" in name and name != "close_without_sending"]
-        assert not [name for name in dir(form) if "submit" in name]
+        form.submit(form.read_step())
+
+        text = form.page_snapshot().text
+        assert "ENVIADA" in text
+        assert "Sua candidatura foi enviada" in text
+
+    def test_reports_a_submission_without_confirmation(self, open_form):
+        form = open_form([REVIEW_SCREEN], confirms_submission=False)
+        form._MAX_CHECKS = 3
+
+        with pytest.raises(EasyApplySubmissionUnconfirmedError, match="Conferir a vaga"):
+            form.submit(form.read_step())
+
+    def test_closes_the_confirmation_after_sending(self, open_form):
+        form = open_form([REVIEW_SCREEN])
+        form.submit(form.read_step())
+
+        form.close_after_sending()
+
+        assert "Sua candidatura foi enviada" not in form.page_snapshot().text
 
     def test_submit_label_is_not_an_advance_label(self):
         assert not {"enviar candidatura", "submit application"} & EasyApplyStepParser.ADVANCE_LABELS

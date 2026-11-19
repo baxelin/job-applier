@@ -109,6 +109,7 @@ class AutomationSettings(StrictModel):
     """Configuração do robô (config.json): ritmo, limites, filtros, buscas em ordem de prioridade e CV."""
 
     daily_application_limit: int = Field(ge=1)
+    daily_submission_limit: int = Field(default=5, ge=1)
     delay_between_actions_seconds: NumberRange
     delay_between_applications_seconds: NumberRange
     long_pause: LongPause | None = None

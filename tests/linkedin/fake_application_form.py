@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from job_applier.linkedin.easy_apply_form import ApplicationForm, EasyApplyFormError
+from job_applier.linkedin.easy_apply_form import (
+    ApplicationForm,
+    EasyApplyFormError,
+    EasyApplySubmissionUnconfirmedError,
+)
 from job_applier.linkedin.easy_apply_step_parser import EasyApplyStep, EasyApplyStepParser
 from job_applier.linkedin.page_snapshot import PageSnapshot
 from job_applier.models.form_field import FieldAnswer, FormField
@@ -17,12 +21,17 @@ class FakeApplicationForm(ApplicationForm):
         stuck_on: int | None = None,
         ignores_answers: bool = False,
         errors_on_upload: bool = False,
+        submission: str = "confirmed",
     ) -> None:
+        """submission: "confirmed", "unconfirmed" (clicou, sem confirmação) ou "error" (o clique falhou)."""
         self._screens = screens
         self._url = url
         self._stuck_on = stuck_on
         self._ignores_answers = ignores_answers
         self._errors_on_upload = errors_on_upload
+        self._submission = submission
+        self.submitted = False
+        self.closed_after_sending = False
         self._current = 0
         self._parser = EasyApplyStepParser()
         self.filled: list[tuple[str, str]] = []
@@ -63,6 +72,16 @@ class FakeApplicationForm(ApplicationForm):
             return None
         self._current += 1
         return self.read_step()
+
+    def submit(self, step: EasyApplyStep) -> None:
+        if self._submission == "error":
+            raise EasyApplyFormError("Não consegui clicar em 'Enviar candidatura'.")
+        self.submitted = True
+        if self._submission == "unconfirmed":
+            raise EasyApplySubmissionUnconfirmedError("Cliquei em enviar, mas o LinkedIn não mostrou a confirmação.")
+
+    def close_after_sending(self) -> None:
+        self.closed_after_sending = True
 
     def close_without_sending(self) -> None:
         self.closed = True

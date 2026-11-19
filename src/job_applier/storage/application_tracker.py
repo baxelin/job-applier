@@ -57,6 +57,9 @@ class ApplicationTracker:
     def record_unavailable(self, application: JobApplication, reason: str) -> None:
         self._update_status(application, ApplicationStatus.SKIPPED, reason)
 
+    def record_applied(self, application: JobApplication, notes: str) -> None:
+        self._applications.mark_applied(application.job_key, notes, self._moment())
+
     def record_failure(self, application: JobApplication, reason: str) -> None:
         self._update_status(application, ApplicationStatus.FAILED, reason)
 
