@@ -27,7 +27,9 @@ TODAY = date(2026, 10, 30)
 
 @pytest.fixture
 def make_submission(example_base_data, applications, tmp_path):  # noqa: F811
-    def build(browser: ApplicationBrowser, daily_limit: int = 5, max_failures: int = 3) -> EasyApplySubmission:
+    def build(
+        browser: ApplicationBrowser, daily_limit: int | None = 5, max_failures: int = 3
+    ) -> EasyApplySubmission:
         data = example_base_data
         pacer = Pacer(data.settings, sleep=lambda seconds: None)
         return EasyApplySubmission(
@@ -89,6 +91,17 @@ class TestEasyApplySubmission:
         assert browser.opened_jobs == ["1"]
         assert result.status is ScanStatus.COMPLETED
         assert "Limite diário de envios atingido (1)" in result.reason
+
+    def test_without_a_daily_limit_sends_the_whole_queue(self, make_submission, save_job, applications):  # noqa: F811
+        for job_id in ("1", "2", "3"):
+            save_job(job_id)
+        applications.mark_applied(job_key("3"), "Enviada", datetime(2026, 10, 30, 9, 0))
+        browser = FakeApplicationBrowser({job_id: FakeApplicationForm([REVIEW]) for job_id in ("1", "2")})
+
+        result = make_submission(browser, daily_limit=None).run()
+
+        assert sorted(browser.opened_jobs) == ["1", "2"]
+        assert "2 enviadas" in result.reason
 
     def test_daily_limit_counts_what_was_sent_earlier_today(
         self, make_submission, save_job, applications  # noqa: F811

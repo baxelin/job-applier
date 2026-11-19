@@ -14,17 +14,17 @@ logger = logging.getLogger(__name__)
 class EasyApplySubmission(EasyApplyRun):
     """Candidatura real: preenche o formulário como o ensaio e, na tela final, clica em "Enviar candidatura".
 
-    Entram primeiro as vagas que já passaram no ensaio, depois as novas, por aderência. Para ao atingir o
-    limite diário de envios (contado pela data do envio, não pelo CV gerado). Cada envio deixa prints, o
-    respostas.txt e o print da confirmação em data/envios, e a página depois do envio fica em data/debug,
-    para conferir o layout da confirmação. Se a confirmação não aparecer, a vaga fica com erro para ser
+    Entram primeiro as vagas que já passaram no ensaio, depois as novas, por aderência. Com daily_limit, para
+    ao atingir o limite diário de envios (contado pela data do envio); sem ele, envia a fila toda. Cada envio
+    deixa prints, o respostas.txt e o print da confirmação em data/envios, e a página depois do envio fica
+    em data/debug, para conferir o layout da confirmação. Se a confirmação não aparecer, a vaga fica com erro para ser
     conferida no site e a execução para: tentar de novo às cegas poderia enviar a mesma candidatura duas vezes.
     """
 
     _SNAPSHOT_PREFIX = "envio"
 
     def __init__(
-        self, *args: Any, daily_limit: int, today: Callable[[], date] = date.today, **kwargs: Any
+        self, *args: Any, daily_limit: int | None = None, today: Callable[[], date] = date.today, **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
         self._daily_limit = daily_limit
@@ -40,6 +40,8 @@ class EasyApplySubmission(EasyApplyRun):
         return jobs if self._max_jobs is None else jobs[: self._max_jobs]
 
     def _ensure_can_continue(self) -> None:
+        if self._daily_limit is None:
+            return
         if self._sent_before_run is None:
             self._sent_before_run = self._applications.count_applied_on(self._today())
         if self._sent_before_run + self._tally[self.finished_label] >= self._daily_limit:

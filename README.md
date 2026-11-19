@@ -28,14 +28,15 @@ Rode `docker compose build` de novo sempre que o código mudar, porque o código
 | Varrer abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier buscar --max-vagas 7` |
 | Ensaiar as candidaturas sem enviar (padrão: até 20 vagas novas) | `docker compose run --rm --service-ports app python -m job_applier ensaiar --max-vagas 20` |
 | Ensaiar e repetir as vagas pendentes de pergunta ou com erro | `docker compose run --rm --service-ports app python -m job_applier ensaiar --repetir-pendentes` |
-| **Enviar** as candidaturas simplificadas (até o limite diário de envios) | `docker compose run --rm --service-ports app python -m job_applier aplicar` |
+| **Enviar** as candidaturas simplificadas | `docker compose run --rm --service-ports app python -m job_applier aplicar` |
+| Enviar abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier aplicar --max-vagas 5` |
 | Gerar CVs a partir de arquivos `.txt` | `docker compose run --rm app python -m job_applier cv data/vagas` |
 | Recriar a planilha a partir do banco | `docker compose run --rm app python -m job_applier planilha` |
 | Rodar os testes | `docker compose run --rm app pytest` |
 
 Com os comandos `login`, `buscar`, `ensaiar` e `aplicar` em execução, o navegador pode ser acompanhado em <http://localhost:6080/vnc.html>. O login só precisa ser refeito quando a sessão do LinkedIn expirar.
 
-A varredura respeita os intervalos de `config/config.json`, incluindo pausas longas, então pode levar vários minutos sem novas mensagens.
+Cada execução também grava o que está fazendo em `data/logs/AAAA-MM-DD.log` ("Abrindo vaga…", "Próxima vaga em 45 s"). Deixe o arquivo aberto no VS Code para acompanhar: se passar alguns minutos sem linha nova, algo travou.
 
 ### Vagas externas
 
@@ -55,7 +56,7 @@ Cada vaga ensaiada ganha uma pasta em `data/ensaios/`, com um print por tela e u
 
 ### Envio das candidaturas
 
-O comando `aplicar` faz o mesmo percurso do ensaio e, na tela final, clica em **Enviar candidatura**. Entram primeiro as vagas que passaram no ensaio, depois as novas, por aderência, até o limite diário de envios (`daily_submission_limit` no `config.json`, contado pela data do envio).
+O comando `aplicar` faz o mesmo percurso do ensaio e, na tela final, clica em **Enviar candidatura**. Entram primeiro as vagas que passaram no ensaio, depois as novas, por aderência. Não há limite diário, a não ser que `daily_submission_limit` seja definido no `config.json` (contado pela data do envio). Use `--max-vagas` para enviar poucas de cada vez.
 
 - Pergunta sem resposta segura: a candidatura não é enviada e a vaga fica pendente, como no ensaio.
 - Cada envio deixa prints, o `respostas.txt` e o print da confirmação em `data/envios/`, e a vaga fica como `Candidatura enviada`.
@@ -73,15 +74,16 @@ O comando `aplicar` faz o mesmo percurso do ensaio e, na tela final, clica em **
 
 ### Recomeçar do zero
 
-As vagas já registradas no banco não são abertas de novo, e apagar só a planilha ou os PDFs não muda isso. Para processar tudo novamente, feche o Excel e apague os três:
+As vagas já registradas no banco não são abertas de novo, e apagar só a planilha ou os PDFs não muda isso. Para começar do zero, feche o Excel e apague o banco, a planilha, os CVs e as evidências:
 
 ```bat
 del data\job_applier.db*
 del data\candidaturas.xlsx
 del data\cvs\*.pdf
+rmdir /s /q data\ensaios data\envios data\debug data\logs
 ```
 
-Isso remove todo o histórico. O banco e a planilha são recriados na próxima execução.
+Isso remove todo o histórico, inclusive o registro das candidaturas já enviadas: depois disso, o robô pode tentar de novo vagas em que você já se candidatou (o LinkedIn não mostra mais o botão e a vaga é ignorada). O login do LinkedIn (volume `browser-profile`) e os seus dados em `personal/` continuam como estão.
 
 ### Sem Docker
 
@@ -110,8 +112,8 @@ O WeasyPrint não roda no Windows, então os PDFs só são gerados no Docker e o
   - [x] Pergunta desconhecida: fecha sem enviar, salva a pergunta e marca a vaga como pendente.
   - [x] Modo de ensaio que preenche tudo e para antes do "Enviar", com prints.
   - [ ] Ensaio em ~20 vagas e revisão dos prints.
-  - [ ] Envio real com limite diário baixo por uma semana.
-  - [ ] Aumentar o limite aos poucos.
+  - [x] Envio real (comando `aplicar`).
+  - [ ] Primeiros envios no site e ajuste da confirmação.
 - [ ] **Fase 7 – Operação:** entrega = projeto rodando sozinho, só com manutenção semanal.
   - [ ] Agendar a execução em horários variados (cron no host ou agendador no container).
   - [ ] Relatório simples: aplicadas no dia, pendentes e perguntas novas para criar regra.

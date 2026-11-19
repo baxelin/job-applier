@@ -1,6 +1,5 @@
 {
   "daily_application_limit": 1000,
-  "daily_submission_limit": 5,
   "delay_between_actions_seconds": { "minimum": 1.5, "maximum": 4 },
   "delay_between_applications_seconds": { "minimum": 30, "maximum": 90 },
   "filters": {
