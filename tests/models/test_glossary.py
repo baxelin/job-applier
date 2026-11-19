@@ -37,6 +37,23 @@ class TestGlossary:
         with pytest.raises(ValidationError, match="repetidos: docker"):
             Glossary.model_validate(glossary_data)
 
+    def test_accepts_terms_related_to_existing_terms(self, glossary_data):
+        glossary_data["terms"].append({"id": "django", "name": "Django", "category": "backend", "related_to": ["python"]})
+
+        assert Glossary.model_validate(glossary_data).terms[-1].related_to == ["python"]
+
+    def test_rejects_relation_to_an_unknown_term(self, glossary_data):
+        glossary_data["terms"][1]["related_to"] = ["linux"]
+
+        with pytest.raises(ValidationError, match="docker relacionado a termos inexistentes: linux"):
+            Glossary.model_validate(glossary_data)
+
+    def test_rejects_relation_to_itself(self, glossary_data):
+        glossary_data["terms"][0]["related_to"] = ["python"]
+
+        with pytest.raises(ValidationError, match="python relacionado a si mesmo"):
+            Glossary.model_validate(glossary_data)
+
     def test_rejects_unknown_category(self, glossary_data):
         glossary_data["terms"][0]["category"] = "linguagem"
 

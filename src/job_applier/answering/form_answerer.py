@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from job_applier.answering.brazilian_location import BrazilianLocation
 from job_applier.answering.option_matcher import OptionMatcher
 from job_applier.answering.salary_calculator import SalaryCalculator
+from job_applier.answering.skill_experience import SkillExperience
 from job_applier.matching.keyword_extractor import KeywordExtractor
 from job_applier.matching.word_filter import WordFilter
 from job_applier.models.answer_book import Answer, AnswerBook
@@ -16,7 +17,7 @@ from job_applier.models.resume import Resume
 class FormAnswerer:
     """Responde um campo de formulário com as regras de respostas.json e os dados do CV.
 
-    A ordem é: pretensão salarial, anos de experiência e, por fim, respostas prontas (vence o padrão mais
+    A ordem é: pretensão salarial, anos de experiência e respostas prontas (vence o padrão mais
     longo que aparecer na pergunta, o mais específico). Devolve None quando não há resposta segura; nesse
     caso a candidatura fica pendente. Nada é inventado: resposta null, pergunta de salário em vaga no
     exterior (a moeda ainda não foi definida) e campo de busca com sugestões ficam sempre sem resposta.
@@ -35,8 +36,7 @@ class FormAnswerer:
         glossary: Glossary,
         matcher: OptionMatcher | None = None,
     ) -> None:
-        self._book = answer_book
-        self._years_by_skill = {skill.term: skill.years for skill in resume.skills}
+        self._skills = SkillExperience(resume, glossary, answer_book.skill_years)
         self._extractor = KeywordExtractor(glossary)
         self._salary = SalaryCalculator(answer_book.salary)
         self._salary_filter = WordFilter(answer_book.salary.patterns)
@@ -81,7 +81,7 @@ class FormAnswerer:
         return Locale.EN if locale is Locale.PT else Locale.PT
 
     def _experience_answer(self, field: FormField, locale: Locale) -> list[str]:
-        """Sim se todas as tecnologias citadas estão no CV, não se nenhuma está; o resto fica para o usuário."""
+        """Sim se todas as tecnologias citadas são conhecidas (CV ou derivadas dele), não se nenhuma é."""
         if field.kind not in self._YES_OR_NO_KINDS or self._experience_filter is None:
             return []
         if not self._experience_filter.first_match_in(field.question):
@@ -89,10 +89,10 @@ class FormAnswerer:
         terms = self._extractor.extract(field.question)
         if not terms:
             return []
-        in_resume = [term in self._years_by_skill for term in terms]
-        if all(in_resume):
+        known = [self._skills.knows(term) for term in terms]
+        if all(known):
             words = self._YES
-        elif not any(in_resume):
+        elif not any(known):
             words = self._NO
         else:
             return []
@@ -107,8 +107,7 @@ class FormAnswerer:
         """Tecnologias do glossário vêm do CV; sem nenhuma, vale a área declarada que aparecer na pergunta."""
         terms = self._extractor.extract(question)
         if terms:
-            default = self._book.skill_years.default_years
-            return [f"{min(self._years_by_skill.get(term, default) for term in terms):g}"]
+            return [f"{min(self._skills.years(term) for term in terms):g}"]
         matches = [
             (len(pattern), area)
             for area, patterns in self._area_filters

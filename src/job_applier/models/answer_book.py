@@ -27,20 +27,22 @@ class YearsArea(StrictModel):
 class SkillYearsRule(StrictModel):
     """Perguntas do tipo "quantos anos de experiência com X": o valor vem das skills do currículo.
 
-    Quando a pergunta não cita tecnologia do glossário, vale a área cujo padrão aparecer nela (vence o mais
-    longo); sem área, a pergunta fica sem resposta.
+    Tecnologia fora do CV, mas derivada de uma que está nele (related_to no glossário), vale related_years;
+    sem related_years, ou sem parentesco, vale default_years. Quando a pergunta não cita tecnologia do
+    glossário, vale a área cujo padrão aparecer nela (vence o mais longo); sem área, fica sem resposta.
     """
 
     patterns: list[NonEmptyText] = Field(min_length=1)
     default_years: int = Field(ge=0)
+    related_years: float | None = Field(default=None, ge=0)
     areas: list[YearsArea] = []
 
 
 class ExperienceRule(StrictModel):
     """Perguntas de sim/não sobre experiência com tecnologias ("Do you have experience with SAP?").
 
-    Responde sim quando todas as tecnologias citadas estão no CV e não quando nenhuma está; misturado ou
-    sem tecnologia reconhecida, fica sem resposta. Vale só para campos de escolha, nunca para texto livre.
+    Responde sim quando todas as tecnologias citadas estão no CV (ou derivam dele, com related_years) e não
+    quando nenhuma está; misturado ou sem tecnologia reconhecida, fica sem resposta. Vale só para campos de escolha, nunca para texto livre.
     """
 
     patterns: list[NonEmptyText] = Field(min_length=1)

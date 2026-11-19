@@ -24,7 +24,8 @@ class TermCategory(StrEnum):
 class Term(StrictModel):
     """Tecnologia ou termo com as formas como pode aparecer escrito numa vaga.
 
-    name_en só é necessário quando o nome em inglês difere do nome principal (ex.: POO / OOP).
+    name_en só é necessário quando o nome em inglês difere do nome principal (ex.: POO / OOP). related_to lista
+    as tecnologias de que esta deriva (Django de Python, Next.js de React), usadas nas perguntas de experiência.
     """
 
     id: Slug
@@ -32,6 +33,7 @@ class Term(StrictModel):
     name_en: NonEmptyText | None = None
     category: TermCategory
     synonyms: list[NonEmptyText] = []
+    related_to: list[Slug] = []
 
     def display_name(self, locale: Locale) -> str:
         return self.name_en if locale is Locale.EN and self.name_en else self.name
@@ -53,6 +55,17 @@ class Glossary(StrictModel):
             (name for term in self.terms for name in term.normalized_names()),
             "Nomes/sinônimos de termos",
         )
+        return self
+
+    @model_validator(mode="after")
+    def _related_terms_exist(self) -> Self:
+        ids = self.term_ids()
+        for term in self.terms:
+            unknown = sorted(set(term.related_to) - ids)
+            if unknown:
+                raise ValueError(f"Termo {term.id} relacionado a termos inexistentes: {', '.join(unknown)}")
+            if term.id in term.related_to:
+                raise ValueError(f"Termo {term.id} relacionado a si mesmo")
         return self
 
     def term_ids(self) -> set[str]:

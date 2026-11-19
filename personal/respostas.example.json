@@ -23,7 +23,8 @@
   ],
   "skill_years": {
     "patterns": ["anos de experiência com", "years of experience"],
-    "default_years": 0
+    "default_years": 0,
+    "related_years": 1
   },
   "salary": {
     "patterns": ["pretensão salarial", "salary expectation"],

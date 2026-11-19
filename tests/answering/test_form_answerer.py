@@ -40,6 +40,7 @@ def answer_book(answer_book_data) -> AnswerBook:
     answer_book_data["skill_years"] = {
         "patterns": ["anos de experiência com", "years of experience", "quantos anos", "how many years"],
         "default_years": 0,
+        "related_years": 1,
         "areas": [
             {"patterns": ["desenvolvimento", "software development"], "years": 2},
             {"patterns": ["desenvolvimento de back-end"], "years": 1.5},
@@ -53,6 +54,7 @@ def answer_book(answer_book_data) -> AnswerBook:
 def answerer(answer_book, resume_data, glossary_data) -> FormAnswerer:
     resume_data["skills"].append({"term": "docker", "years": 1.5, "tags": ["devops"]})
     glossary_data["terms"].append({"id": "kubernetes", "name": "Kubernetes", "category": "devops", "synonyms": []})
+    glossary_data["terms"].append({"id": "django", "name": "Django", "category": "backend", "related_to": ["python"]})
     return FormAnswerer(answer_book, Resume.model_validate(resume_data), Glossary.model_validate(glossary_data))
 
 
@@ -152,6 +154,11 @@ class TestSkillYears:
 
         assert answerer.answer(text_field(question), application()).text == "0"
 
+    def test_skill_derived_from_the_resume_uses_the_related_years(self, answerer):
+        answer = answerer.answer(text_field("How many years of experience with Django?"), application())
+
+        assert answer.text == "1"
+
     def test_fills_number_fields(self, answerer):
         field = text_field("Years of experience with Docker", kind=FieldKind.NUMBER)
 
@@ -195,6 +202,11 @@ class TestExperienceFromTheResume:
         field = choice_field("Você tem experiência com Kubernetes?", "Sim", "Não")
 
         assert answerer.answer(field, application()).text == "Não"
+
+    def test_skill_derived_from_the_resume_counts_as_experience(self, answerer):
+        field = choice_field("Do you have experience with Django?", "Yes", "No")
+
+        assert answerer.answer(field, application(locale="en")).text == "Yes"
 
     def test_mixed_technologies_stay_unanswered(self, answerer):
         field = choice_field("Do you have experience with Python and Kubernetes?", "Yes", "No")
