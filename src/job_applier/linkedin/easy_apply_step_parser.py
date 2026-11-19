@@ -37,8 +37,16 @@ class EasyApplyStep:
     def selected_resume(self) -> str | None:
         return next((resume.label for resume in self.resumes if resume.selected), None)
 
+    @property
+    def newest_resume(self) -> FieldOption | None:
+        """O LinkedIn lista os currículos do mais novo para o mais antigo: o recém-carregado fica no topo."""
+        return self.resumes[0] if self.resumes else None
+
     def resume_names(self) -> tuple[str, ...]:
         return tuple(resume.label for resume in self.resumes)
+
+    def resume_count(self, name: str) -> int:
+        return sum(resume.label == name for resume in self.resumes)
 
     def resume_control(self, name: str) -> str:
         return next(resume.control for resume in self.resumes if resume.label == name)

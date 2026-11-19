@@ -22,6 +22,7 @@ class FakeApplicationForm(ApplicationForm):
         ignores_answers: bool = False,
         errors_on_upload: bool = False,
         submission: str = "confirmed",
+        close_fails: bool = False,
     ) -> None:
         """submission: "confirmed", "unconfirmed" (clicou, sem confirmação) ou "error" (o clique falhou)."""
         self._screens = screens
@@ -30,6 +31,7 @@ class FakeApplicationForm(ApplicationForm):
         self._ignores_answers = ignores_answers
         self._errors_on_upload = errors_on_upload
         self._submission = submission
+        self._close_fails = close_fails
         self.submitted = False
         self.closed_after_sending = False
         self._current = 0
@@ -84,6 +86,8 @@ class FakeApplicationForm(ApplicationForm):
         self.closed_after_sending = True
 
     def close_without_sending(self) -> None:
+        if self._close_fails:
+            raise EasyApplyFormError("Não consegui fechar o modal.")
         self.closed = True
 
     def save_screenshot(self, path: Path) -> None:

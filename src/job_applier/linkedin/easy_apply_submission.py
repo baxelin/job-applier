@@ -64,7 +64,7 @@ class EasyApplySubmission(EasyApplyRun):
             evidence.record_result(f"envio não confirmado: {error}")
             raise StopRun(f"{application.company} - {application.title}: {error} Página salva em {snapshot}.")
         except EasyApplyFormError as error:
-            form.close_without_sending()
+            self._discard(form, job_id)
             self._tracker.record_failure(application, str(error))
             evidence.record_result(f"erro ao enviar: {error}")
             self._count_failure(self.FAILED, evidence.folder)

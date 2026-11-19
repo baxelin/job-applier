@@ -147,6 +147,7 @@ class EasyApplyForm(ApplicationForm):
                 self._click_choice(option.control)
 
     def upload_resume(self, step: EasyApplyStep, resume: ResumeUploadFile) -> None:
+        copies_before = step.resume_count(resume.name)
         payload = FilePayload(name=resume.name, mimeType=self._PDF_MIME_TYPE, buffer=resume.content)
         try:
             with self._page.expect_file_chooser(timeout=self._ACTION_TIMEOUT_MS) as chooser:
@@ -154,16 +155,27 @@ class EasyApplyForm(ApplicationForm):
             chooser.value.set_files(payload)
         except PlaywrightError as error:
             raise EasyApplyFormError(f"Não consegui carregar o currículo: {error.message}") from error
-        self._ensure_selected(resume)
+        self._ensure_new_copy_selected(resume, copies_before)
 
-    def _ensure_selected(self, resume: ResumeUploadFile) -> None:
-        listed = self._settled_step(lambda step: resume.name in step.resume_names())
+    def _ensure_new_copy_selected(self, resume: ResumeUploadFile, copies_before: int) -> None:
+        """O LinkedIn guarda os currículos já carregados, e os de cada idioma têm sempre o mesmo nome.
+
+        Escolher pelo nome poderia marcar o CV de outra vaga: vale a cópia nova, que aparece a mais e no
+        topo da lista, conferida pelo controle da opção.
+        """
+        listed = self._settled_step(
+            lambda step: step.resume_count(resume.name) > copies_before
+            and step.newest_resume is not None
+            and step.newest_resume.label == resume.name
+        )
         if listed is None:
-            raise EasyApplyFormError(f"O currículo {resume.name} não apareceu na lista depois do upload.")
-        if listed.selected_resume != resume.name:
-            self._click_choice(listed.resume_control(resume.name))
-        if self.read_step().selected_resume != resume.name:
-            raise EasyApplyFormError(f"O currículo {resume.name} não ficou selecionado.")
+            raise EasyApplyFormError(f"O currículo {resume.name} não apareceu no topo da lista depois do upload.")
+        new_copy = listed.newest_resume
+        if not new_copy.selected:
+            self._click_choice(new_copy.control)
+        selected = next((option for option in self.read_step().resumes if option.selected), None)
+        if selected is None or selected.control != new_copy.control:
+            raise EasyApplyFormError(f"O currículo {resume.name} carregado agora não ficou selecionado.")
 
     def advance(self, step: EasyApplyStep) -> EasyApplyStep | None:
         label = step.action_label or ""

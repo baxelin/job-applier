@@ -34,6 +34,10 @@ CONTACT_SCREEN = modal(
     + question_textarea("Descreva sua experiência", required=False),
 )
 RESUME_SCREEN = modal(resume_step(), progress="2 de 4 páginas")
+RESUME_SCREEN_WITH_OLD_COPY = modal(
+    resume_step(selected=RESUME.name, files={RESUME.name: "_r_11_", "CV antigo.pdf": "_r_12_"}),
+    progress="2 de 4 páginas",
+)
 QUESTIONS_SCREEN = modal(
     radio_group("Você é PcD?", {"_r_5_": "Yes", "_r_6_": "No"})
     + checkbox_group("Quais plataformas?", {"_r_7_": "AWS", "_r_8_": "Outra"}),
@@ -68,6 +72,7 @@ def fake_linkedin_page(
     apply_button: bool = True,
     button_opens_form: bool = True,
     confirms_submission: bool = True,
+    warns_before_leaving: bool = False,
 ) -> str:
     """Imita a vaga e o modal: telas em sequência, validação, upload pelo seletor de arquivos e descarte.
 
@@ -91,6 +96,9 @@ def fake_linkedin_page(
       <div id="events"></div>
       <input id="file" type="file" hidden>
       <script>
+        if ({json.dumps(warns_before_leaving)}) {{
+          window.addEventListener('beforeunload', event => {{ event.preventDefault(); event.returnValue = ''; }});
+        }}
         const screens = {json.dumps(screens)};
         const root = document.getElementById('modal');
         const events = document.getElementById('events');
@@ -256,6 +264,13 @@ class TestResumeUpload:
 
         assert form.read_step().selected_resume == RESUME.name
 
+    def test_an_old_copy_with_the_same_name_is_never_the_one_sent(self, open_form):
+        form = open_form([RESUME_SCREEN_WITH_OLD_COPY], selects_upload=False)
+
+        form.upload_resume(form.read_step(), RESUME)
+
+        assert [option.control for option in form.read_step().resumes if option.selected] == ["_r_90_"]
+
 
 class TestAdvancing:
     def test_walks_to_the_next_screen(self, open_form):
@@ -349,3 +364,20 @@ class TestScreenshot:
 
         assert path.stat().st_size > 0
         assert form._page.viewport_size == {"width": 1366, "height": 860}
+
+
+class TestLeavingThePage:
+    def test_opening_another_job_leaves_a_form_that_did_not_close(self, tmp_path):
+        page = tmp_path / "vaga.html"
+        page.write_text(fake_linkedin_page([CONTACT_SCREEN], warns_before_leaving=True), encoding="utf-8")
+        browser = LinkedInBrowser(
+            tmp_path / "profile", tmp_path / "debug", headless=True, job_url_for=lambda _: page.as_uri()
+        )
+
+        with browser:
+            browser.open_job("1")
+            browser.open_application_form()
+            snapshot = browser.open_job("2")
+
+        assert "Sobre a vaga" in snapshot.text
+        assert "Pretensão salarial" not in snapshot.text

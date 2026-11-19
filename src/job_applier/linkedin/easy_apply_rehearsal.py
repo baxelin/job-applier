@@ -30,7 +30,7 @@ class EasyApplyRehearsal(EasyApplyRun):
         return self._applications.list_ready_for_easy_apply(self._max_jobs, self._retry_pending)
 
     def _finish(self, form: ApplicationForm, application: JobApplication, evidence: RehearsalEvidence) -> None:
-        form.close_without_sending()
+        self._discard(form, self._job_id(application))
         self._tracker.record_rehearsal_ready(application, f"Ensaio em {evidence.folder.name}")
         evidence.record_result("pronta para enviar (nada foi enviado)")
         self._count_success(self.finished_label)

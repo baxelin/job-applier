@@ -125,25 +125,29 @@ def checkbox_group(question: str, options: dict[str, str]) -> str:
 def resume_radio(name: str, control: str, checked: bool, wrapped: bool) -> str:
     """Parte das vagas traz o nome do arquivo num wrapper [role=radio]; as outras, no próprio input."""
     state = "true" if checked else "false"
+    radio = f'id="{control}" name="radio-group-resume" type="radio" data-live-checked="{state}"'
+    radio += " checked" if checked else ""
     if wrapped:
         return f"""
         <div aria-checked="{state}" aria-label="{name}" role="radio" tabindex="0">
           <div aria-label="{name}">
-            <input id="{control}" name="radio-group-resume" type="radio" data-live-checked="{state}">
+            <input {radio}>
             <label for="{control}"></label>
           </div>
         </div>
         """
     return f"""
     <div><div aria-label="{name}">
-      <input aria-label="{name}" id="{control}" name="radio-group-resume" type="radio" data-live-checked="{state}">
+      <input aria-label="{name}" {radio}>
       <label for="{control}"></label>
     </div></div>
     """
 
 
-def resume_step(selected: str = "CV antigo.pdf", wrapped: bool = True) -> str:
-    files = {"CV antigo.pdf": "_r_11_", "CV mais antigo.pdf": "_r_12_"}
+def resume_step(
+    selected: str = "CV antigo.pdf", wrapped: bool = True, files: dict[str, str] | None = None
+) -> str:
+    files = files or {"CV antigo.pdf": "_r_11_", "CV mais antigo.pdf": "_r_12_"}
     entries = "".join(
         f"""
         <div>

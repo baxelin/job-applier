@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from job_applier.linkedin.easy_apply_filler import EasyApplyFiller, FillOutcome, FillStatus
-from job_applier.linkedin.easy_apply_form import ApplicationForm, EasyApplyUnavailableError
+from job_applier.linkedin.easy_apply_form import ApplicationForm, EasyApplyFormError, EasyApplyUnavailableError
 from job_applier.linkedin.job_page_parser import JobPageParser
 from job_applier.linkedin.job_scanner import ScanResult
 from job_applier.linkedin.linkedin_browser import ApplicationBrowser
@@ -142,8 +142,18 @@ class EasyApplyRun(ABC):
             return
         if outcome.status is FillStatus.FAILED:
             self._browser.save_snapshot(f"{self._SNAPSHOT_PREFIX}-{job_id}")
-        form.close_without_sending()
+        self._discard(form, job_id)
         self._record_unfinished(application, outcome, evidence)
+
+    def _discard(self, form: ApplicationForm, job_id: str) -> None:
+        """Fecha sem enviar. Se o modal não fechar, a vaga segue com o resultado que teve e a execução continua:
+        abrir a próxima vaga sai desta página e descarta o formulário.
+        """
+        try:
+            form.close_without_sending()
+        except EasyApplyFormError as error:
+            snapshot = self._browser.save_snapshot(f"{self._SNAPSHOT_PREFIX}-{job_id}-fechar")
+            logger.warning("%s A execução segue. Página salva em %s.", error, snapshot)
 
     @staticmethod
     def _job_id(application: JobApplication) -> str:

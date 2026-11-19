@@ -123,6 +123,21 @@ class TestSearchAndApply:
         assert status_of(applications, "2") is ApplicationStatus.APPLIED
         assert "1 enviadas, 1 com pergunta sem resposta" in result.reason
 
+    def test_a_form_that_does_not_close_does_not_stop_the_search(self, make_run, applications):
+        stuck = FakeApplicationForm([UNKNOWN_QUESTION], close_fails=True)
+        browser = SearchAndApplyBrowser(
+            [["1", "2"]],
+            {"1": dev_job(), "2": dev_job("Desenvolvedor Vue Júnior")},
+            {"1": stuck, "2": FakeApplicationForm([REVIEW])},
+        )
+
+        result = make_run(browser).run()
+
+        assert result.status is ScanStatus.COMPLETED
+        assert status_of(applications, "1") is ApplicationStatus.UNKNOWN_QUESTION_PENDING
+        assert status_of(applications, "2") is ApplicationStatus.APPLIED
+        assert "envio-1-fechar" in browser.snapshots
+
     def test_unconfirmed_submission_stops_the_search(self, make_run, applications):
         browser = SearchAndApplyBrowser(
             [["1", "2"]],
