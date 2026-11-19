@@ -103,7 +103,6 @@ class CommandLine:
                 SqliteApplicationRepository(self._database),
                 Pacer(base_data.settings),
                 max_jobs=max_jobs,
-                retry_pending=retry_pending,
             )
 
         return ScanCommand(
@@ -130,6 +129,7 @@ class CommandLine:
                 self._data_dir / "ensaios",
                 base_data.settings.scan.max_consecutive_extraction_errors,
                 max_jobs=max_jobs,
+                retry_pending=retry_pending,
             )
 
         return ScanCommand(

@@ -1,6 +1,8 @@
 import pytest
 
 from job_applier.cli import CommandLine
+from job_applier.linkedin.easy_apply_rehearsal import EasyApplyRehearsal
+from job_applier.linkedin.job_scanner import JobScanner
 
 
 class TestCommandLine:
@@ -29,3 +31,21 @@ class TestCommandLine:
 
         assert exit_code == 1
         assert "cv_base.json" in capsys.readouterr().err
+
+
+class TestCommandFactories:
+    """Montam o scanner e o ensaio sem abrir o navegador: pegam erros de ligação entre os argumentos."""
+
+    def test_scan_command_builds_the_scanner(self, tmp_path, example_base_data):
+        command = CommandLine(project_root=tmp_path)._scan_command(max_jobs=3)
+
+        assert isinstance(command._scanner_factory(example_base_data, object()), JobScanner)
+
+    @pytest.mark.parametrize("retry_pending", [True, False])
+    def test_rehearsal_command_builds_the_rehearsal(self, tmp_path, example_base_data, retry_pending):
+        command = CommandLine(project_root=tmp_path)._rehearsal_command(max_jobs=3, retry_pending=retry_pending)
+
+        rehearsal = command._scanner_factory(example_base_data, object())
+
+        assert isinstance(rehearsal, EasyApplyRehearsal)
+        assert rehearsal._retry_pending is retry_pending
