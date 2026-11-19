@@ -28,8 +28,12 @@ class ApplicationRepository(ABC):
         """Todas as vagas, das mais recentes para as mais antigas."""
 
     @abstractmethod
-    def list_ready_for_easy_apply(self, limit: int | None = None) -> list[JobApplication]:
-        """Vagas simplificadas com CV ainda sem ensaio: as nunca tentadas primeiro, depois por aderência."""
+    def list_ready_for_easy_apply(self, limit: int | None = None, retry_pending: bool = False) -> list[JobApplication]:
+        """Vagas simplificadas com CV nunca tentadas, por aderência.
+
+        Com retry_pending, as pendentes de pergunta e com erro entram depois das novas: só vale a pena
+        repeti-las quando respostas.json ganhou respostas novas ou um erro foi corrigido.
+        """
 
     @abstractmethod
     def update_status(self, job_key: str, status: ApplicationStatus, notes: str | None, updated_at: datetime) -> None:
@@ -81,13 +85,13 @@ class SqliteApplicationRepository(ApplicationRepository):
             rows = connection.execute("SELECT * FROM job_applications ORDER BY created_at DESC, id DESC").fetchall()
         return [self._from_row(row) for row in rows]
 
-    def list_ready_for_easy_apply(self, limit: int | None = None) -> list[JobApplication]:
+    def list_ready_for_easy_apply(self, limit: int | None = None, retry_pending: bool = False) -> list[JobApplication]:
         with self._database.connect() as connection:
             rows = connection.execute(
                 """
                 SELECT * FROM job_applications
                 WHERE apply_type = :apply_type AND resume_path IS NOT NULL
-                  AND status IN (:new_status, :first_retried, :second_retried)
+                  AND (status = :new_status OR (:retry_pending AND status IN (:first_retried, :second_retried)))
                 ORDER BY status = :new_status DESC, fit_percentage DESC, id
                 LIMIT :limit
                 """,
@@ -96,6 +100,7 @@ class SqliteApplicationRepository(ApplicationRepository):
                     "new_status": ApplicationStatus.CV_GENERATED.value,
                     "first_retried": self._RETRIED_STATUSES[0].value,
                     "second_retried": self._RETRIED_STATUSES[1].value,
+                    "retry_pending": retry_pending,
                     "limit": self._NO_LIMIT if limit is None else limit,
                 },
             ).fetchall()

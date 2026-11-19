@@ -49,7 +49,7 @@ class CommandLine:
             case "buscar":
                 return self._scan_command(parsed.max_jobs).run()
             case "ensaiar":
-                return self._rehearsal_command(parsed.max_jobs).run()
+                return self._rehearsal_command(parsed.max_jobs, parsed.retry_pending).run()
             case _:
                 return Application().run()
 
@@ -69,6 +69,12 @@ class CommandLine:
         )
         rehearsal.add_argument(
             "--max-vagas", dest="max_jobs", type=int, default=20, help="Quantas vagas ensaiar (padrão: 20)."
+        )
+        rehearsal.add_argument(
+            "--repetir-pendentes",
+            dest="retry_pending",
+            action="store_true",
+            help="Depois das vagas novas, tenta de novo as pendentes de pergunta e as com erro.",
         )
         return parser
 
@@ -91,6 +97,7 @@ class CommandLine:
                 SqliteApplicationRepository(self._database),
                 Pacer(base_data.settings),
                 max_jobs=max_jobs,
+                retry_pending=retry_pending,
             )
 
         return ScanCommand(
@@ -101,7 +108,7 @@ class CommandLine:
             tracker,
         )
 
-    def _rehearsal_command(self, max_jobs: int) -> ScanCommand[LinkedInBrowser]:
+    def _rehearsal_command(self, max_jobs: int, retry_pending: bool) -> ScanCommand[LinkedInBrowser]:
         tracker = self._tracker()
 
         def rehearsal_factory(base_data: BaseData, browser: LinkedInBrowser) -> EasyApplyRehearsal:

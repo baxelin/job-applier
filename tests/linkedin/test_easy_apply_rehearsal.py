@@ -86,7 +86,9 @@ def save_job(applications, tmp_path):
 
 @pytest.fixture
 def make_rehearsal(example_base_data, applications, tmp_path):
-    def build(browser: ApplicationBrowser, max_jobs: int | None = None, max_failures: int = 3) -> EasyApplyRehearsal:
+    def build(
+        browser: ApplicationBrowser, max_jobs: int | None = None, max_failures: int = 3, retry_pending: bool = False
+    ) -> EasyApplyRehearsal:
         data = example_base_data
         pacer = Pacer(data.settings, sleep=lambda seconds: None)
         return EasyApplyRehearsal(
@@ -100,6 +102,7 @@ def make_rehearsal(example_base_data, applications, tmp_path):
             max_failures,
             max_jobs=max_jobs,
             now=lambda: NOW,
+            retry_pending=retry_pending,
         )
 
     return build
@@ -206,6 +209,19 @@ class TestEasyApplyRehearsal:
         make_rehearsal(browser, max_jobs=1).run()
 
         assert browser.opened_jobs == ["1"]
+
+    def test_pending_job_is_only_retried_when_asked(self, make_rehearsal, save_job, applications):
+        save_job("1")
+        make_rehearsal(FakeApplicationBrowser({"1": FakeApplicationForm([UNKNOWN_QUESTION])})).run()
+
+        default_run = FakeApplicationBrowser({"1": FakeApplicationForm([REVIEW])})
+        make_rehearsal(default_run, max_jobs=5).run()
+        retry_run = FakeApplicationBrowser({"1": FakeApplicationForm([REVIEW])})
+        make_rehearsal(retry_run, retry_pending=True).run()
+
+        assert default_run.opened_jobs == []
+        assert retry_run.opened_jobs == ["1"]
+        assert status_of(applications, "1") is ApplicationStatus.REHEARSED
 
     def test_rehearsed_job_is_not_opened_again(self, make_rehearsal, save_job):
         save_job("1")

@@ -26,7 +26,8 @@ Rode `docker compose build` de novo sempre que o código mudar, porque o código
 | Entrar no LinkedIn manualmente | `docker compose run --rm --service-ports app python -m job_applier login` |
 | Varrer as vagas e gerar os CVs | `docker compose run --rm --service-ports app python -m job_applier buscar` |
 | Varrer abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier buscar --max-vagas 7` |
-| Ensaiar as candidaturas sem enviar (padrão: até 20 vagas) | `docker compose run --rm --service-ports app python -m job_applier ensaiar --max-vagas 20` |
+| Ensaiar as candidaturas sem enviar (padrão: até 20 vagas novas) | `docker compose run --rm --service-ports app python -m job_applier ensaiar --max-vagas 20` |
+| Ensaiar e repetir as vagas pendentes de pergunta ou com erro | `docker compose run --rm --service-ports app python -m job_applier ensaiar --repetir-pendentes` |
 | Gerar CVs a partir de arquivos `.txt` | `docker compose run --rm app python -m job_applier cv data/vagas` |
 | Recriar a planilha a partir do banco | `docker compose run --rm app python -m job_applier planilha` |
 | Rodar os testes | `docker compose run --rm app pytest` |

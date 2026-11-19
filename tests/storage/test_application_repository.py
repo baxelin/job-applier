@@ -75,12 +75,21 @@ class TestListReadyForEasyApply:
 
         assert applications.list_ready_for_easy_apply() == []
 
-    def test_retries_pending_and_failed_jobs_after_the_new_ones(self, applications):
+    def test_lists_only_new_jobs_by_default(self, applications):
         applications.save(easy_apply("pendente", fit=100, status=ApplicationStatus.UNKNOWN_QUESTION_PENDING))
         applications.save(easy_apply("erro", fit=90, status=ApplicationStatus.FAILED))
         applications.save(easy_apply("nova", fit=10))
 
-        assert [item.job_key for item in applications.list_ready_for_easy_apply()] == ["nova", "pendente", "erro"]
+        assert [item.job_key for item in applications.list_ready_for_easy_apply()] == ["nova"]
+
+    def test_retries_pending_and_failed_jobs_after_the_new_ones_when_asked(self, applications):
+        applications.save(easy_apply("pendente", fit=100, status=ApplicationStatus.UNKNOWN_QUESTION_PENDING))
+        applications.save(easy_apply("erro", fit=90, status=ApplicationStatus.FAILED))
+        applications.save(easy_apply("nova", fit=10))
+
+        listed = applications.list_ready_for_easy_apply(retry_pending=True)
+
+        assert [item.job_key for item in listed] == ["nova", "pendente", "erro"]
 
     def test_orders_by_fit_and_respects_the_limit(self, applications):
         applications.save(easy_apply("baixa", fit=20))

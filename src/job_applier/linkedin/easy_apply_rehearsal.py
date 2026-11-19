@@ -61,6 +61,7 @@ class EasyApplyRehearsal:
         max_jobs: int | None = None,
         now: Callable[[], datetime] = datetime.now,
         page_parser: JobPageParser | None = None,
+        retry_pending: bool = False,
     ) -> None:
         self._browser = browser
         self._filler = filler
@@ -73,12 +74,13 @@ class EasyApplyRehearsal:
         self._max_jobs = max_jobs
         self._now = now
         self._page_parser = page_parser or JobPageParser()
+        self._retry_pending = retry_pending
         self._guard = SessionGuard()
         self._tally: Counter[_Tally] = Counter()
         self._consecutive_failures = 0
 
     def run(self) -> ScanResult:
-        jobs = self._applications.list_ready_for_easy_apply(self._max_jobs)
+        jobs = self._applications.list_ready_for_easy_apply(self._max_jobs, self._retry_pending)
         try:
             for position, application in enumerate(jobs, start=1):
                 self._rehearse(application)
