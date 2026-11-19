@@ -18,7 +18,7 @@ class NumberRange(StrictModel):
 
 
 class LongPause(StrictModel):
-    """Pausa longa feita a cada N candidaturas, para simular o ritmo de uma pessoa."""
+    """Pausa longa feita a cada N vagas, para simular o ritmo de uma pessoa. Sem ela no config, não há pausa."""
 
     every_applications: int = Field(ge=1)
     minutes: NumberRange
@@ -104,7 +104,7 @@ class AutomationSettings(StrictModel):
     daily_application_limit: int = Field(ge=1)
     delay_between_actions_seconds: NumberRange
     delay_between_applications_seconds: NumberRange
-    long_pause: LongPause
+    long_pause: LongPause | None = None
     filters: JobFilters
     searches: list[SearchQuery] = Field(min_length=1)
     resume: ResumeSettings

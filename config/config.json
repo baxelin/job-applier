@@ -2,10 +2,6 @@
   "daily_application_limit": 1000,
   "delay_between_actions_seconds": { "minimum": 1.5, "maximum": 4 },
   "delay_between_applications_seconds": { "minimum": 30, "maximum": 90 },
-  "long_pause": {
-    "every_applications": 10,
-    "minutes": { "minimum": 5, "maximum": 15 }
-  },
   "filters": {
     "posted_within_hours": 168,
     "experience_levels": ["internship", "entry_level", "associate"],

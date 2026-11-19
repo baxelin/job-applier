@@ -135,6 +135,7 @@ class JobScanner:
     def _scan_job(self, job_id: str) -> None:
         self._ensure_can_continue()
         self._pacer.between_actions()
+        logger.info("Abrindo vaga %s.", job_id)
         snapshot = self._browser.open_job(job_id)
         self._guard.check(snapshot)
         try:

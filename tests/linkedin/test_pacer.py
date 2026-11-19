@@ -1,3 +1,6 @@
+import logging
+from datetime import datetime
+
 from job_applier.linkedin.pacer import Pacer
 from job_applier.models.automation_settings import AutomationSettings
 
@@ -11,7 +14,12 @@ class RecordingSleep:
 
 
 def pacer(settings_data, sleep) -> Pacer:
-    return Pacer(AutomationSettings.model_validate(settings_data), sleep=sleep, uniform=lambda low, high: high)
+    return Pacer(
+        AutomationSettings.model_validate(settings_data),
+        sleep=sleep,
+        uniform=lambda low, high: high,
+        now=lambda: datetime(2026, 11, 19, 10, 20),
+    )
 
 
 class TestPacer:
@@ -34,4 +42,21 @@ class TestPacer:
 
         pacer(settings_data, sleep).after_job(jobs_processed=5)
 
-        assert sleep.calls == [60, 10 * 60]
+        assert sleep.calls == [60] + [60] * 10
+
+    def test_long_pause_tells_when_it_resumes_and_how_much_is_left(self, settings_data, caplog):
+        caplog.set_level(logging.INFO)
+
+        pacer(settings_data, RecordingSleep()).after_job(jobs_processed=5)
+
+        assert "retoma às 10:30" in caplog.text
+        assert "faltam 9 min" in caplog.text
+        assert "faltam 1 min" in caplog.text
+
+    def test_long_pause_is_optional(self, settings_data):
+        del settings_data["long_pause"]
+        sleep = RecordingSleep()
+
+        pacer(settings_data, sleep).after_job(jobs_processed=5)
+
+        assert sleep.calls == [60]

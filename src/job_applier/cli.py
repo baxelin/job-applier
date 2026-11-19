@@ -1,5 +1,4 @@
 import argparse
-import logging
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from job_applier.commands.login_command import LoginCommand
 from job_applier.commands.refresh_report_command import RefreshReportCommand
 from job_applier.commands.scan_command import ScanCommand
 from job_applier.config.base_data_loader import BaseDataLoader, BaseDataPaths
+from job_applier.execution_log import ExecutionLog
 from job_applier.linkedin.easy_apply_filler import EasyApplyFiller
 from job_applier.linkedin.easy_apply_rehearsal import EasyApplyRehearsal
 from job_applier.linkedin.job_scanner import JobScanner
@@ -34,11 +34,17 @@ class CommandLine:
         self._project_root = project_root or Path.cwd()
         self._data_dir = self._project_root / "data"
         self._database = Database(self._data_dir / "job_applier.db")
+        self._log = ExecutionLog(self._data_dir / "logs")
 
     def run(self, arguments: Sequence[str]) -> int:
         parsed = self._parser().parse_args(arguments)
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%d/%m %H:%M:%S")
-        logging.getLogger("weasyprint").setLevel(logging.WARNING)
+        self._log.configure()
+        try:
+            return self._run_command(parsed)
+        finally:
+            self._log.close()
+
+    def _run_command(self, parsed: argparse.Namespace) -> int:
         match parsed.command:
             case "cv":
                 return self._generate_resumes_command().run(parsed.paths)
