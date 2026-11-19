@@ -52,8 +52,14 @@ class UnknownQuestion(StrictModel):
     occurrences: int = Field(ge=1)
     last_company: str | None = None
     last_title: str | None = None
+    last_status: ApplicationStatus | None = None
     first_seen_at: datetime
     last_seen_at: datetime
+
+    @property
+    def blocks_a_job(self) -> bool:
+        """A última vaga em que apareceu continua esperando a resposta (uma regra nova só vale depois de repetir)."""
+        return self.last_status is ApplicationStatus.UNKNOWN_QUESTION_PENDING
 
 
 class ScanStatus(StrEnum):

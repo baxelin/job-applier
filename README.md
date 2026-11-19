@@ -35,9 +35,13 @@ Rode `docker compose build` de novo sempre que o código mudar, porque o código
 | Buscar e enviar abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier buscar-e-aplicar --max-vagas 10` |
 | Gerar CVs a partir de arquivos `.txt` | `docker compose run --rm app python -m job_applier cv data/vagas` |
 | Recriar a planilha a partir do banco | `docker compose run --rm app python -m job_applier planilha` |
+| Ver o resumo de hoje (enviadas, pendências e perguntas que travam vagas) | `docker compose run --rm app python -m job_applier relatorio` |
+| Ver o resumo de outro dia | `docker compose run --rm app python -m job_applier relatorio --data 2026-11-19` |
 | Rodar os testes | `docker compose run --rm app pytest` |
 
 Com os comandos `login`, `buscar`, `ensaiar`, `aplicar` e `buscar-e-aplicar` em execução, o navegador pode ser acompanhado em <http://localhost:6080/vnc.html>. O login só precisa ser refeito quando a sessão do LinkedIn expirar.
+
+No fim de cada um desses comandos aparece o resumo do dia: o que foi enviado, quantas vagas novas foram vistas, o que está esperando por você (vagas para aplicar no site da empresa, pendentes de pergunta, com erro) e as perguntas que ainda travam alguma vaga. Uma pergunta sai da lista assim que a vaga dela é enviada.
 
 Cada execução também grava o que está fazendo em `data/logs/AAAA-MM-DD.log` ("Abrindo vaga…", "Próxima vaga em 45 s"). Deixe o arquivo aberto no VS Code para acompanhar: se passar alguns minutos sem linha nova, algo travou.
 
@@ -122,7 +126,7 @@ O WeasyPrint não roda no Windows, então os PDFs só são gerados no Docker e o
   - [x] Busca e envio na mesma execução (comando `buscar-e-aplicar`).
 - [ ] **Fase 7 – Operação:** entrega = projeto rodando sozinho, só com manutenção semanal.
   - [x] `docker stop` encerra na hora e registra a execução como interrompida.
-  - [ ] Agendar a execução em horários variados (cron no host ou agendador no container).
-  - [ ] Relatório simples: aplicadas no dia, pendentes e perguntas novas para criar regra.
+  - [x] Execução manual, nos dias e horários escolhidos pelo usuário, com `buscar-e-aplicar --max-vagas N` (sem agendamento automático).
+  - [x] Resumo do dia no fim de cada execução e no comando `relatorio`.
   - [ ] Rotina semanal: revisar perguntas desconhecidas, termos não reconhecidos e respostas de empresas na planilha.
   - [ ] README de operação: como subir, refazer o login e adicionar regras.

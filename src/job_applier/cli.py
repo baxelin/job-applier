@@ -1,9 +1,11 @@
 import argparse
 from collections.abc import Callable, Sequence
+from datetime import date
 from pathlib import Path
 
 from job_applier.answering.form_answerer import FormAnswerer
 from job_applier.app import Application
+from job_applier.commands.daily_report_command import DailyReportCommand
 from job_applier.commands.generate_resumes_command import GenerateResumesCommand
 from job_applier.commands.login_command import LoginCommand
 from job_applier.commands.refresh_report_command import RefreshReportCommand
@@ -21,6 +23,7 @@ from job_applier.linkedin.search_and_apply import SearchAndApply
 from job_applier.models.automation_settings import AutomationSettings
 from job_applier.models.base_data import BaseData
 from job_applier.models.job_application import JobApplication
+from job_applier.reporting.daily_summary import DailySummaryBuilder
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
 from job_applier.resume.resume_upload_file import ResumeUploadFileLoader
@@ -59,14 +62,16 @@ class CommandLine:
                 return RefreshReportCommand(self._tracker()).run()
             case "login":
                 return self._login_command().run()
+            case "relatorio":
+                return self._daily_report_command().run(parsed.day)
             case "buscar":
-                return self._scan_command(parsed.max_jobs).run()
+                return self._then_report(self._scan_command(parsed.max_jobs).run())
             case "ensaiar":
-                return self._rehearsal_command(parsed.max_jobs, parsed.retry_pending).run()
+                return self._then_report(self._rehearsal_command(parsed.max_jobs, parsed.retry_pending).run())
             case "aplicar":
-                return self._submission_command(parsed.max_jobs, parsed.retry_pending).run()
+                return self._then_report(self._submission_command(parsed.max_jobs, parsed.retry_pending).run())
             case "buscar-e-aplicar":
-                return self._search_and_apply_command(parsed.max_jobs).run()
+                return self._then_report(self._search_and_apply_command(parsed.max_jobs).run())
             case _:
                 return Application().run()
 
@@ -79,6 +84,10 @@ class CommandLine:
         resume.add_argument("paths", nargs="+", type=Path, metavar="vaga", help="Arquivo .txt ou pasta com vagas.")
         commands.add_parser("planilha", help="Recria data/candidaturas.xlsx a partir do banco.")
         commands.add_parser("login", help="Abre o LinkedIn para login manual (perfil persistente).")
+        report = commands.add_parser("relatorio", help="Resumo do dia: enviadas, pendências e perguntas novas.")
+        report.add_argument(
+            "--data", dest="day", type=date.fromisoformat, metavar="AAAA-MM-DD", help="Outro dia (padrão: hoje)."
+        )
         scan = commands.add_parser("buscar", help="Percorre as buscas do config.json e registra as vagas (sem aplicar).")
         scan.add_argument("--max-vagas", dest="max_jobs", type=int, help="Para depois de abrir N vagas.")
         rehearsal = commands.add_parser(
@@ -109,6 +118,19 @@ class CommandLine:
         )
         search_and_apply.add_argument("--max-vagas", dest="max_jobs", type=int, help="Para depois de abrir N vagas.")
         return parser
+
+    def _then_report(self, exit_code: int) -> int:
+        """Depois de cada execução no navegador, o resumo do dia aparece no terminal."""
+        print()
+        self._daily_report_command().run()
+        return exit_code
+
+    def _daily_report_command(self) -> DailyReportCommand:
+        return DailyReportCommand(
+            DailySummaryBuilder(
+                SqliteApplicationRepository(self._database), SqliteUnknownQuestionRepository(self._database)
+            )
+        )
 
     def _generate_resumes_command(self) -> GenerateResumesCommand:
         return GenerateResumesCommand(self._base_data_loader(), self._resume_generator, self._tracker())

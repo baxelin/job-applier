@@ -28,6 +28,14 @@ class TestCommandLine:
         assert exit_code == 1
         assert "cv_base.json" in capsys.readouterr().err
 
+    def test_relatorio_command_shows_the_summary_of_the_chosen_day(self, tmp_path, capsys):
+        exit_code = CommandLine(project_root=tmp_path).run(["relatorio", "--data", "2026-11-18"])
+
+        assert exit_code == 0
+        output = capsys.readouterr().out
+        assert "Resumo de 18/11/2026" in output
+        assert "Nada esperando por você." in output
+
     def test_rehearsal_command_validates_the_data_before_opening_the_browser(self, tmp_path, capsys):
         exit_code = CommandLine(project_root=tmp_path).run(["ensaiar", "--max-vagas", "1"])
 
