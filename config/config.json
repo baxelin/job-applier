@@ -3,9 +3,9 @@
   "delay_between_actions_seconds": { "minimum": 1.5, "maximum": 4 },
   "delay_between_applications_seconds": { "minimum": 30, "maximum": 90 },
   "filters": {
-    "posted_within_hours": 168,
+    "posted_within_hours": 720,
     "minimum_fit_percentage": 30,
-    "experience_levels": ["internship", "entry_level", "associate"],
+    "sort_by": "relevance",
     "workplace_types": ["remote", "hybrid", "on_site"],
     "forbidden_title_words": [
       "sênior",

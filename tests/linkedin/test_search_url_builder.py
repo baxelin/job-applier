@@ -1,7 +1,7 @@
 from urllib.parse import parse_qs, urlsplit
 
 from job_applier.linkedin.search_url_builder import LinkedInSearchUrlBuilder
-from job_applier.models.automation_settings import JobFilters, SearchQuery
+from job_applier.models.automation_settings import JobFilters, SearchOrder, SearchQuery
 
 FILTERS = JobFilters(
     experience_levels=["internship", "entry_level", "associate"],
@@ -27,6 +27,20 @@ class TestLinkedInSearchUrlBuilder:
             "sortBy": ["DD"],
             "f_TPR": ["r86400"],
         }
+
+    def test_without_experience_levels_the_search_does_not_filter_by_level(self):
+        filters = FILTERS.model_copy(update={"experience_levels": []})
+
+        url = LinkedInSearchUrlBuilder(filters).build(SearchQuery(keywords="Dev", location="Brasil"))
+
+        assert "f_E" not in query(url)
+
+    def test_can_sort_by_relevance(self):
+        filters = FILTERS.model_copy(update={"sort_by": SearchOrder.RELEVANCE})
+
+        url = LinkedInSearchUrlBuilder(filters).build(SearchQuery(keywords="Dev", location="Brasil"))
+
+        assert query(url)["sortBy"] == ["R"]
 
     def test_search_workplace_types_override_the_global_filter(self):
         search = SearchQuery(keywords="Junior Developer", location="Worldwide", workplace_types=["remote"])

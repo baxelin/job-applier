@@ -33,6 +33,11 @@ class ExperienceLevel(StrEnum):
     EXECUTIVE = "executive"
 
 
+class SearchOrder(StrEnum):
+    RELEVANCE = "relevance"
+    RECENT = "recent"
+
+
 class WorkplaceType(StrEnum):
     ON_SITE = "on_site"
     HYBRID = "hybrid"
@@ -40,12 +45,13 @@ class WorkplaceType(StrEnum):
 
 
 class JobFilters(StrictModel):
-    experience_levels: list[ExperienceLevel] = Field(min_length=1)
+    experience_levels: list[ExperienceLevel] = []
     workplace_types: list[WorkplaceType] = Field(min_length=1)
     forbidden_title_words: list[NonEmptyText] = []
     blocked_companies: list[NonEmptyText] = []
     posted_within_hours: int | None = Field(default=None, ge=1)
     minimum_fit_percentage: int = Field(default=0, ge=0, le=100)
+    sort_by: SearchOrder = SearchOrder.RECENT
 
 
 class SearchQuery(StrictModel):
