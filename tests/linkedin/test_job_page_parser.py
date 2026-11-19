@@ -4,6 +4,7 @@ import pytest
 
 from job_applier.linkedin.job_page_parser import JobExtractionError, JobPageParser
 from job_applier.models.job_posting import ApplyType
+from job_applier.models.automation_settings import WorkplaceType
 from tests.linkedin.pages import current_job_page, job_page
 
 TODAY = date(2026, 10, 29)
@@ -52,6 +53,10 @@ class TestCurrentLayout:
 
         with pytest.raises(JobExtractionError, match="descrição"):
             parse(html)
+
+    def test_reads_the_workplace_of_this_job_not_of_similar_jobs(self):
+        assert parse(current_job_page(workplace="Híbrido")).workplace is WorkplaceType.HYBRID
+        assert parse(current_job_page(workplace=None)).workplace is None
 
     def test_detects_external_application_by_aria_label(self):
         assert parse(current_job_page()).apply_type is ApplyType.EXTERNAL

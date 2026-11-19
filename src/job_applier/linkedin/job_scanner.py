@@ -10,6 +10,7 @@ from job_applier.linkedin.run_stop import StopRun
 from job_applier.linkedin.search_results_parser import JobCard, SearchResultsParser
 from job_applier.linkedin.search_url_builder import LinkedInSearchUrlBuilder
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
+from job_applier.matching.location_policy import LocationPolicy
 from job_applier.matching.word_filter import WordFilter
 from job_applier.models.automation_settings import AutomationSettings, SearchQuery
 from job_applier.models.job_application import JobApplication, ScanStatus
@@ -74,6 +75,7 @@ class JobScanner:
         self._guard = SessionGuard()
         self._title_filter = WordFilter(settings.filters.forbidden_title_words)
         self._company_filter = WordFilter(settings.filters.blocked_companies)
+        self._location_policy = LocationPolicy(settings.filters.on_site_cities)
         self._jobs_seen = 0
         self._jobs_recorded = 0
         self._resumes_left_today = 0
@@ -147,6 +149,7 @@ class JobScanner:
         self._consecutive_extraction_errors = 0
         self._jobs_seen += 1
         self._save_page_if_external_link_is_missing(posting)
+        self._save_page_if_workplace_is_missing(posting)
         self._record(posting)
         self._pacer.after_job(self._jobs_seen)
 
@@ -155,6 +158,13 @@ class JobScanner:
         if posting.apply_type is ApplyType.EXTERNAL and not posting.external_apply_url:
             snapshot = self._browser.save_snapshot(f"vaga-{posting.linkedin_id}")
             logger.warning("Vaga %s: link externo não encontrado. Página salva em %s.", posting.linkedin_id, snapshot)
+
+    def _save_page_if_workplace_is_missing(self, posting: JobPosting) -> None:
+        """Sem modalidade, uma vaga fora das cidades aceitas é ignorada; a página mostra se o layout mudou."""
+        description = posting.description
+        if posting.workplace is None and self._location_policy.skip_reason(None, description.title, description.location):
+            snapshot = self._browser.save_snapshot(f"vaga-{posting.linkedin_id}-modalidade")
+            logger.warning("Vaga %s: modalidade não encontrada. Página salva em %s.", posting.linkedin_id, snapshot)
 
     def _record(self, posting: JobPosting) -> None:
         evaluation = self._generator.evaluate(posting.description)
@@ -184,6 +194,8 @@ class JobScanner:
             return f"Título contém '{word}'"
         if evaluation.analysis.is_support_role:
             return "Vaga de suporte"
+        if location := self._location_policy.skip_reason(posting.workplace, description.title, description.location):
+            return location
         if posting.apply_type is ApplyType.CLOSED:
             return "Vaga não aceita mais candidaturas"
         if self._applications.has_company_and_title(description.company, description.title):

@@ -5,6 +5,7 @@ import pytest
 from job_applier.models.job_application import ApplicationStatus
 from job_applier.reporting.daily_report_text import DailyReportText
 from job_applier.reporting.daily_summary import DailySummaryBuilder
+from tests.factories import tracker_for
 from tests.storage.conftest import application
 
 DAY = date(2026, 11, 19)
@@ -63,6 +64,14 @@ class TestDailySummaryBuilder:
 
         assert [question.question for question in builder.build(DAY).open_questions] == ["Ainda trava"]
 
+    def test_questions_answered_in_the_latest_attempt_are_not_listed(self, builder, applications, questions, tmp_path):
+        job = save(applications, "1")
+        tracker = tracker_for(tmp_path, now=lambda: YESTERDAY)
+        tracker.record_unknown_questions(job, ["Respondida depois por uma regra", "Ainda sem resposta"])
+        tracker_for(tmp_path, now=lambda: TODAY).record_unknown_questions(job, ["Ainda sem resposta"])
+
+        assert [question.question for question in builder.build(DAY).open_questions] == ["Ainda sem resposta"]
+
 
 class TestDailyReportText:
     def test_shows_sent_jobs_pending_work_and_blocking_questions(self, builder, applications, questions):
@@ -70,6 +79,7 @@ class TestDailyReportText:
         save(applications, "2", status=ApplicationStatus.FAILED, title="Dev Java")
         pending = save(applications, "3", status=ApplicationStatus.UNKNOWN_QUESTION_PENDING)
         questions.register("Você tem CNH?", pending.id, YESTERDAY)
+        questions.register("Você tem CNH?", pending.id, TODAY)
         questions.register("Por que nós?", pending.id, TODAY)
 
         text = DailyReportText().render(builder.build(DAY))
@@ -79,7 +89,7 @@ class TestDailyReportText:
         assert "Vagas novas: 3 (3 com CV, 0 ignoradas)" in text
         assert "1 com erro" in text and "Empresa 2: Dev Java" in text
         assert "1 pendentes de pergunta" in text
-        assert text.endswith('"Você tem CNH?" (1x, última: Empresa 3)')
+        assert '"Você tem CNH?" (2x, última: Empresa 3)\n' in text
         assert '"Por que nós?" (1x, última: Empresa 3) [nova]' in text
         assert "para aplicar no site da empresa" not in text
 

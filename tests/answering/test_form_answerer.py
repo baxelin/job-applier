@@ -1,6 +1,7 @@
 import pytest
 
 from job_applier.answering.form_answerer import FormAnswerer
+from job_applier.matching.location_policy import LocationPolicy
 from job_applier.models.answer_book import AnswerBook
 from job_applier.models.form_field import FieldKind, FieldOption, FormField
 from job_applier.models.glossary import Glossary
@@ -47,6 +48,10 @@ def answer_book(answer_book_data) -> AnswerBook:
         ],
     }
     answer_book_data["experience"] = {"patterns": ["experiência com", "experience with", "experience working with"]}
+    answer_book_data["workplace"] = {
+        "on_site_patterns": ["presencial", "híbrido", "on-site", "hybrid"],
+        "remote_patterns": ["remoto", "remote"],
+    }
     return AnswerBook.model_validate(answer_book_data)
 
 
@@ -55,7 +60,12 @@ def answerer(answer_book, resume_data, glossary_data) -> FormAnswerer:
     resume_data["skills"].append({"term": "docker", "years": 1.5, "tags": ["devops"]})
     glossary_data["terms"].append({"id": "kubernetes", "name": "Kubernetes", "category": "devops", "synonyms": []})
     glossary_data["terms"].append({"id": "django", "name": "Django", "category": "backend", "related_to": ["python"]})
-    return FormAnswerer(answer_book, Resume.model_validate(resume_data), Glossary.model_validate(glossary_data))
+    return FormAnswerer(
+        answer_book,
+        Resume.model_validate(resume_data),
+        Glossary.model_validate(glossary_data),
+        location_policy=LocationPolicy(["São Paulo"]),
+    )
 
 
 class TestAnswers:
@@ -232,6 +242,38 @@ class TestExperienceFromTheResume:
         field = choice_field("Do you have experience with AWS in production?", "Yes", "No")
 
         assert answerer.answer(field, application(locale="en")) is None
+
+
+class TestWorkplace:
+    def test_remote_is_always_yes(self, answerer):
+        field = choice_field("Você tem disponibilidade para trabalho remoto?", "Sim", "Não")
+
+        assert answerer.answer(field, application(location="Recife, PE")).text == "Sim"
+
+    def test_on_site_in_an_accepted_city_named_in_the_question_is_yes(self, answerer):
+        field = choice_field("Disponibilidade para atuar 100% presencial na Vila Olimpia em São Paulo/SP?", "Yes", "No")
+
+        assert answerer.answer(field, application(location="Brasil")).text == "Yes"
+
+    def test_on_site_for_a_job_in_an_accepted_city_is_yes(self, answerer):
+        field = choice_field("Você aceita o modelo híbrido?", "Sim", "Não")
+
+        assert answerer.answer(field, application(location="São Paulo, SP")).text == "Sim"
+
+    def test_on_site_for_a_job_in_another_city_is_no(self, answerer):
+        field = choice_field("Você aceita o modelo presencial?", "Sim", "Não")
+
+        assert answerer.answer(field, application(location="Curitiba, PR")).text == "Não"
+
+    def test_on_site_without_knowing_where_stays_unanswered(self, answerer):
+        field = choice_field("Você aceita o modelo presencial?", "Sim", "Não")
+
+        assert answerer.answer(field, application(location="Brasil")) is None
+
+    def test_free_text_about_workplace_is_not_answered_with_yes_or_no(self, answerer):
+        field = text_field("Descreva sua experiência com trabalho remoto")
+
+        assert answerer.answer(field, application()) is None
 
 
 class TestSalary:

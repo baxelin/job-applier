@@ -47,11 +47,19 @@ class ApplicationTracker:
         self._update_status(application, ApplicationStatus.REHEARSED, notes)
 
     def record_unknown_questions(self, application: JobApplication, questions: Sequence[str]) -> None:
-        """Guarda as perguntas para o usuário responder e deixa a vaga pendente até lá."""
+        """Guarda as perguntas para o usuário responder e deixa a vaga pendente até lá.
+
+        Perguntas e vaga levam o mesmo instante: assim o resumo do dia sabe quais perguntas são da última
+        tentativa (as de tentativas anteriores podem já ter sido respondidas por regras novas).
+        """
+        moment = self._moment()
         for question in questions:
-            self._questions.register(question, application.id, self._moment())
-        self._update_status(
-            application, ApplicationStatus.UNKNOWN_QUESTION_PENDING, f"Sem resposta para: {' | '.join(questions)}"
+            self._questions.register(question, application.id, moment)
+        self._applications.update_status(
+            application.job_key,
+            ApplicationStatus.UNKNOWN_QUESTION_PENDING,
+            f"Sem resposta para: {' | '.join(questions)}",
+            moment,
         )
 
     def record_unavailable(self, application: JobApplication, reason: str) -> None:

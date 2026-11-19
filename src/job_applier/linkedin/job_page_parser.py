@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup, Tag
 
 from job_applier.linkedin.posting_text_parser import PostingTextParser
 from job_applier.matching.text_normalizer import TextNormalizer
+from job_applier.models.automation_settings import WorkplaceType
 from job_applier.models.job_description import JobDescription
 from job_applier.models.job_posting import ApplyType, JobPosting
 
@@ -73,6 +74,14 @@ class JobPageParser:
     _WEB_SCHEMES = frozenset({"http", "https"})
     _SEPARATOR = re.compile(r"\s*[·•]\s*")
     _BLOCK_TAGS = ("p", "div", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6", "section")
+    _WORKPLACES = {
+        "remoto": WorkplaceType.REMOTE,
+        "remote": WorkplaceType.REMOTE,
+        "hibrido": WorkplaceType.HYBRID,
+        "hybrid": WorkplaceType.HYBRID,
+        "presencial": WorkplaceType.ON_SITE,
+        "on-site": WorkplaceType.ON_SITE,
+    }
 
     def __init__(self, text_parser: PostingTextParser | None = None) -> None:
         self._text_parser = text_parser or PostingTextParser()
@@ -103,7 +112,23 @@ class JobPageParser:
             external_apply_url=self._external_apply_url(soup) if apply_type is ApplyType.EXTERNAL else None,
             applicants=self._text_parser.applicants(top_card),
             posted_on=self._text_parser.posted_on(top_card, today),
+            workplace=self._workplace(soup, linkedin_id),
         )
+
+    def workplace(self, html: str, linkedin_id: str) -> WorkplaceType | None:
+        return self._workplace(BeautifulSoup(html, "html.parser"), linkedin_id)
+
+    def _workplace(self, soup: BeautifulSoup, linkedin_id: str) -> WorkplaceType | None:
+        """A modalidade é um texto sozinho ("Remoto") num link para a própria vaga, no topo da página.
+
+        Validado em 24 páginas reais (out–nov/2026); as vagas semelhantes também têm esses links, mas
+        apontam para outros ids.
+        """
+        for link in soup.find_all("a", href=re.compile(rf"/jobs/view/{linkedin_id}(?:/|$|\?)")):
+            for text in link.stripped_strings:
+                if workplace := self._WORKPLACES.get(TextNormalizer.normalize(text)):
+                    return workplace
+        return None
 
     def _from_document_title(self, soup: BeautifulSoup) -> tuple[str | None, str | None]:
         """O <title> da página tem o formato "Título da vaga | Empresa | LinkedIn"."""

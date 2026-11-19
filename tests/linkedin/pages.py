@@ -35,6 +35,7 @@ def current_job_page(
     apply_label: str = "Candidatar-se no site da empresa",
     apply_href: str = "https://empresa.example/vaga",
     about_section_attributes: str = "",
+    workplace: str | None = "Remoto",
 ) -> str:
     """Layout de 2026: classes embaralhadas; âncoras estáveis em <title>, aria-label e título "Sobre a vaga"."""
     return f"""
@@ -44,6 +45,7 @@ def current_job_page(
         <a class="b0ak8d" aria-label="Empresa {company}." href="/company/x/life"><p>{company}</p></a>
         <p class="b0ak8d b0ak3r"><span>{title}</span></p>
         <p class="b0ak8d b0ak3b"><span>{top_line.replace(" · ", "</span> · <span>")}</span></p>
+        {workplace_chip(job_id, workplace)}
         <a class="b0alko" aria-label="{apply_label}" href="{apply_href}">
           <span>Candidatar-se</span></a>
       </div>
@@ -61,10 +63,18 @@ def current_job_page(
         <span data-testid="expandable-text-box" tabindex="-1"><p>Texto institucional da {company}.</p></span>
       </div>
       <div componentkey="JobDetailsSimilarJobsSlot_{job_id}">
+        <a href="https://www.linkedin.com/jobs/view/999/"><span>Presencial</span></a>
         <p><span>Outra vaga</span> · <span>há 1 dia</span> · <span>5 pessoas clicaram em Candidate-se</span></p>
       </div>
     </body></html>
     """
+
+
+def workplace_chip(job_id: str, workplace: str | None) -> str:
+    """No layout de 2026 a modalidade é um texto sozinho num link para a própria vaga."""
+    if workplace is None:
+        return ""
+    return f'<a href="https://www.linkedin.com/jobs/view/{job_id}/"><span><span>{workplace}</span></span></a>'
 
 
 def search_page(*jobs: str | tuple[str, str, str]) -> str:

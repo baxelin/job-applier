@@ -48,6 +48,18 @@ class ExperienceRule(StrictModel):
     patterns: list[NonEmptyText] = Field(min_length=1)
 
 
+class WorkplaceRule(StrictModel):
+    """Perguntas de sim/não sobre modalidade ("Aceita trabalhar presencial em São Paulo?").
+
+    Remoto é sempre sim. Presencial e híbrido seguem filters.on_site_cities do config.json: sim quando a
+    pergunta cita uma cidade aceita ou a vaga é numa delas, não quando a vaga é em outra cidade; sem saber
+    onde, fica sem resposta. Vale só para campos de escolha.
+    """
+
+    on_site_patterns: list[NonEmptyText] = Field(min_length=1)
+    remote_patterns: list[NonEmptyText] = Field(min_length=1)
+
+
 class SalaryRule(StrictModel):
     """Pretensão salarial (valores CLT): usa o mínimo informado pela vaga, nunca abaixo do piso.
 
@@ -74,6 +86,7 @@ class AnswerBook(StrictModel):
     skill_years: SkillYearsRule
     salary: SalaryRule
     experience: ExperienceRule | None = None
+    workplace: WorkplaceRule | None = None
 
     @model_validator(mode="after")
     def _ids_are_unique(self) -> Self:

@@ -6,6 +6,7 @@
     "posted_within_hours": 720,
     "minimum_fit_percentage": 30,
     "minimum_terms_for_fit": 3,
+    "on_site_cities": ["São Paulo"],
     "sort_by": "relevance",
     "workplace_types": ["remote", "hybrid", "on_site"],
     "forbidden_title_words": [
@@ -42,12 +43,18 @@
       "pcd",
       "pessoas com deficiência",
       "pessoa com deficiência",
+      "afirmativa",
+      "afirmativas",
       "pessoas negras",
       "pessoa negra",
       "pessoas pretas",
+      "pessoas indígenas",
       "lgbt",
       "lgbtqia",
       "lgbtqiapn",
+      "mulheres",
+      "mulher",
+      "women",
       "sap",
       "abap",
       "field service"
@@ -60,10 +67,10 @@
       "keywords": "Estágio Desenvolvimento de Software",
       "location": "São Paulo, SP"
     },
-    { "keywords": "Desenvolvedor Python Júnior", "location": "Brasil" },
-    { "keywords": "Desenvolvedor Full Stack Júnior", "location": "Brasil" },
-    { "keywords": "Desenvolvedor Front-end Júnior", "location": "Brasil" },
-    { "keywords": "Junior Developer", "location": "Brasil" },
+    { "keywords": "Desenvolvedor Python Júnior", "location": "Brasil", "workplace_types": ["remote"] },
+    { "keywords": "Desenvolvedor Full Stack Júnior", "location": "Brasil", "workplace_types": ["remote"] },
+    { "keywords": "Desenvolvedor Front-end Júnior", "location": "Brasil", "workplace_types": ["remote"] },
+    { "keywords": "Junior Developer", "location": "Brasil", "workplace_types": ["remote"] },
     {
       "keywords": "Junior Developer",
       "location": "Portugal",
@@ -79,9 +86,9 @@
       "location": "Worldwide",
       "workplace_types": ["remote"]
     },
-    { "keywords": "DevOps Júnior", "location": "Brasil" },
+    { "keywords": "DevOps Júnior", "location": "Brasil", "workplace_types": ["remote"] },
     { "keywords": "Estágio DevOps", "location": "São Paulo, SP" },
-    { "keywords": "Cloud Júnior", "location": "Brasil" },
+    { "keywords": "Cloud Júnior", "location": "Brasil", "workplace_types": ["remote"] },
     {
       "keywords": "Junior DevOps Engineer",
       "location": "Worldwide",

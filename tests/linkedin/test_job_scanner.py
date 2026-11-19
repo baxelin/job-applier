@@ -161,6 +161,32 @@ class TestJobScanner:
         assert status[JobPosting.url_for("1")] is ApplicationStatus.CV_GENERATED
         assert status[JobPosting.url_for("2")] is ApplicationStatus.SKIPPED
 
+    def test_outside_the_accepted_cities_only_remote_jobs_get_a_resume(
+        self, make_scanner, applications, example_base_data
+    ):
+        filters = example_base_data.settings.filters.model_copy(update={"on_site_cities": ["São Paulo"]})
+        rio = "Rio de Janeiro, RJ · há 1 dia · 10 pessoas clicaram em Candidate-se"
+        browser = FakeBrowser(
+            [["1", "2", "3"]],
+            {
+                "1": current_job_page(job_id="1", title="Dev Júnior", top_line=rio, workplace="Presencial"),
+                "2": current_job_page(job_id="2", title="Dev Front Júnior", top_line=rio, workplace="Remoto"),
+                "3": current_job_page(
+                    job_id="3", title="Dev Back Júnior", top_line="São Paulo, SP · há 1 dia", workplace="Híbrido"
+                ),
+            },
+        )
+
+        make_scanner(browser, filters=filters).run()
+
+        notes = {item.url: (item.status, item.notes) for item in applications.list_all()}
+        assert notes[JobPosting.url_for("1")] == (
+            ApplicationStatus.SKIPPED,
+            "Presencial fora de São Paulo (Rio de Janeiro, RJ)",
+        )
+        assert notes[JobPosting.url_for("2")][0] is ApplicationStatus.MANUAL_APPLICATION_PENDING
+        assert notes[JobPosting.url_for("3")][0] is ApplicationStatus.MANUAL_APPLICATION_PENDING
+
     def test_discards_blocked_companies_from_the_results_list_without_opening(self, make_scanner, applications):
         browser = FakeBrowser(
             [[("1", "Desenvolvedor Júnior", "BairesDev"), ("2", "Desenvolvedor Júnior", "Empresa Boa")]],

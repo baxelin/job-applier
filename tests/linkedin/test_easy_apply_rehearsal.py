@@ -67,7 +67,7 @@ def applications(tmp_path) -> SqliteApplicationRepository:
 
 @pytest.fixture
 def save_job(applications, tmp_path):
-    def save(job_id: str, fit: int = 80) -> None:
+    def save(job_id: str, fit: int = 80, location: str = "São Paulo") -> None:
         resume = tmp_path / "data" / "cvs" / f"cv-{job_id}.pdf"
         resume.parent.mkdir(parents=True, exist_ok=True)
         resume.write_bytes(b"%PDF-fake")
@@ -78,6 +78,7 @@ def save_job(applications, tmp_path):
                 apply_type="candidatura_simplificada",
                 fit_percentage=fit,
                 resume_path=f"data/cvs/cv-{job_id}.pdf",
+                location=location,
             )
         )
 

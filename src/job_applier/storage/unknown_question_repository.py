@@ -51,7 +51,7 @@ class SqliteUnknownQuestionRepository(UnknownQuestionRepository):
                 SELECT question.id, question.question, question.occurrences,
                        question.first_seen_at, question.last_seen_at,
                        application.company AS last_company, application.title AS last_title,
-                       application.status AS last_status
+                       application.status AS last_status, application.updated_at AS last_job_updated_at
                 FROM unknown_questions AS question
                 LEFT JOIN job_applications AS application ON application.id = question.last_application_id
                 ORDER BY question.occurrences DESC, question.last_seen_at DESC

@@ -20,6 +20,7 @@ from job_applier.linkedin.job_scanner import JobScanner
 from job_applier.linkedin.linkedin_browser import JobBrowser, LinkedInBrowser
 from job_applier.linkedin.pacer import Pacer
 from job_applier.linkedin.search_and_apply import SearchAndApply
+from job_applier.matching.location_policy import LocationPolicy
 from job_applier.models.automation_settings import AutomationSettings
 from job_applier.models.base_data import BaseData
 from job_applier.models.job_application import JobApplication
@@ -155,6 +156,7 @@ class CommandLine:
             submission = EasyApplySubmission(
                 *self._easy_apply_parts(base_data, browser, tracker, "envios"),
                 daily_limit=base_data.settings.daily_submission_limit,
+                location_policy=self._location_policy(base_data.settings),
             )
             scanner = self._scanner(base_data, browser, tracker, max_jobs, on_easy_apply_resume=submission.apply_to)
             return SearchAndApply(scanner, submission)
@@ -183,7 +185,12 @@ class CommandLine:
     def _rehearsal_command(self, max_jobs: int, retry_pending: bool) -> ScanCommand[LinkedInBrowser]:
         return self._easy_apply_command(
             "ensaios",
-            lambda parts, settings: EasyApplyRehearsal(*parts, max_jobs=max_jobs, retry_pending=retry_pending),
+            lambda parts, settings: EasyApplyRehearsal(
+                *parts,
+                max_jobs=max_jobs,
+                retry_pending=retry_pending,
+                location_policy=self._location_policy(settings),
+            ),
         )
 
     def _submission_command(self, max_jobs: int | None, retry_pending: bool) -> ScanCommand[LinkedInBrowser]:
@@ -194,6 +201,7 @@ class CommandLine:
                 max_jobs=max_jobs,
                 daily_limit=settings.daily_submission_limit,
                 retry_pending=retry_pending,
+                location_policy=self._location_policy(settings),
             ),
         )
 
@@ -211,7 +219,12 @@ class CommandLine:
     def _easy_apply_parts(
         self, base_data: BaseData, browser: LinkedInBrowser, tracker: ApplicationTracker, evidence_folder: str
     ) -> tuple:
-        answerer = FormAnswerer(base_data.answer_book, base_data.resume, base_data.glossary)
+        answerer = FormAnswerer(
+            base_data.answer_book,
+            base_data.resume,
+            base_data.glossary,
+            location_policy=self._location_policy(base_data.settings),
+        )
         pacer = Pacer(base_data.settings)
         return (
             browser,
@@ -223,6 +236,10 @@ class CommandLine:
             self._data_dir / evidence_folder,
             base_data.settings.scan.max_consecutive_extraction_errors,
         )
+
+    @staticmethod
+    def _location_policy(settings: AutomationSettings) -> LocationPolicy:
+        return LocationPolicy(settings.filters.on_site_cities)
 
     def _browser_command(
         self, factory: Callable[[BaseData, LinkedInBrowser], BrowserRun], tracker: ApplicationTracker

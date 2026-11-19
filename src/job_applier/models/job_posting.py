@@ -5,6 +5,7 @@ from typing import Annotated
 
 from pydantic import Field, StringConstraints
 
+from job_applier.models.automation_settings import WorkplaceType
 from job_applier.models.base import StrictModel
 from job_applier.models.job_description import JobDescription
 
@@ -29,6 +30,7 @@ class JobPosting(StrictModel):
     external_apply_url: str | None = None
     applicants: int | None = Field(default=None, ge=0)
     posted_on: date | None = None
+    workplace: WorkplaceType | None = None
 
     @staticmethod
     def url_for(linkedin_id: str) -> str:

@@ -53,13 +53,21 @@ class UnknownQuestion(StrictModel):
     last_company: str | None = None
     last_title: str | None = None
     last_status: ApplicationStatus | None = None
+    last_job_updated_at: datetime | None = None
     first_seen_at: datetime
     last_seen_at: datetime
 
     @property
     def blocks_a_job(self) -> bool:
-        """A última vaga em que apareceu continua esperando a resposta (uma regra nova só vale depois de repetir)."""
-        return self.last_status is ApplicationStatus.UNKNOWN_QUESTION_PENDING
+        """A última vaga em que apareceu continua pendente por ela, na tentativa mais recente da vaga.
+
+        Uma pergunta de tentativa anterior, respondida por regra nova, não trava mais nada.
+        """
+        return (
+            self.last_status is ApplicationStatus.UNKNOWN_QUESTION_PENDING
+            and self.last_job_updated_at is not None
+            and self.last_seen_at >= self.last_job_updated_at
+        )
 
 
 class ScanStatus(StrEnum):

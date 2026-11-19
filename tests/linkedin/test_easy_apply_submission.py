@@ -7,6 +7,7 @@ from job_applier.linkedin.easy_apply_filler import EasyApplyFiller
 from job_applier.linkedin.easy_apply_submission import EasyApplySubmission
 from job_applier.linkedin.linkedin_browser import ApplicationBrowser
 from job_applier.linkedin.pacer import Pacer
+from job_applier.matching.location_policy import LocationPolicy
 from job_applier.models.job_application import ApplicationStatus, ScanStatus
 from job_applier.resume.resume_upload_file import ResumeUploadFileLoader
 from tests.factories import tracker_for
@@ -28,7 +29,10 @@ TODAY = date(2026, 10, 30)
 @pytest.fixture
 def make_submission(example_base_data, applications, tmp_path):  # noqa: F811
     def build(
-        browser: ApplicationBrowser, daily_limit: int | None = 5, max_failures: int = 3
+        browser: ApplicationBrowser,
+        daily_limit: int | None = 5,
+        max_failures: int = 3,
+        location_policy: LocationPolicy | None = None,
     ) -> EasyApplySubmission:
         data = example_base_data
         pacer = Pacer(data.settings, sleep=lambda seconds: None)
@@ -44,6 +48,7 @@ def make_submission(example_base_data, applications, tmp_path):  # noqa: F811
             now=lambda: NOW,
             daily_limit=daily_limit,
             today=lambda: TODAY,
+            location_policy=location_policy,
         )
 
     return build
@@ -152,6 +157,20 @@ class TestEasyApplySubmission:
         assert failing.closed and not failing.submitted
         assert status_of(applications, "1") is ApplicationStatus.FAILED
         assert status_of(applications, "2") is ApplicationStatus.APPLIED
+
+    def test_queued_job_outside_the_accepted_cities_is_skipped_unless_remote(
+        self, make_submission, save_job, applications  # noqa: F811
+    ):
+        save_job("1", location="Rio de Janeiro e Região")
+        form = FakeApplicationForm([REVIEW])
+
+        result = make_submission(
+            FakeApplicationBrowser({"1": form}), location_policy=LocationPolicy(["São Paulo"])
+        ).run()
+
+        assert not form.submitted
+        assert status_of(applications, "1") is ApplicationStatus.SKIPPED
+        assert "1 fora do local aceito" in result.reason
 
     def test_already_sent_jobs_are_not_opened_again(self, make_submission, save_job):  # noqa: F811
         save_job("1")

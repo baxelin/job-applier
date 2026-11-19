@@ -5,6 +5,7 @@ from job_applier.answering.option_matcher import OptionMatcher
 from job_applier.answering.salary_calculator import SalaryCalculator
 from job_applier.answering.skill_experience import SkillExperience
 from job_applier.matching.keyword_extractor import KeywordExtractor
+from job_applier.matching.location_policy import LocationPolicy
 from job_applier.matching.word_filter import WordFilter
 from job_applier.models.answer_book import Answer, AnswerBook, YearsArea
 from job_applier.models.base import Locale
@@ -35,6 +36,7 @@ class FormAnswerer:
         resume: Resume,
         glossary: Glossary,
         matcher: OptionMatcher | None = None,
+        location_policy: LocationPolicy | None = None,
     ) -> None:
         self._skills = SkillExperience(resume, glossary, answer_book.skill_years)
         self._extractor = KeywordExtractor(glossary)
@@ -46,6 +48,10 @@ class FormAnswerer:
         self._experience_filter = WordFilter(experience.patterns) if experience else None
         self._answer_filters = [(answer, WordFilter(answer.patterns)) for answer in answer_book.answers]
         self._matcher = matcher or OptionMatcher()
+        self._location_policy = location_policy or LocationPolicy([])
+        workplace = answer_book.workplace
+        self._on_site_filter = WordFilter(workplace.on_site_patterns) if workplace else None
+        self._remote_filter = WordFilter(workplace.remote_patterns) if workplace else None
         self._brazil = BrazilianLocation()
 
     def answer(self, field: FormField, application: JobApplication) -> FieldAnswer | None:
@@ -74,11 +80,34 @@ class FormAnswerer:
             if answer.answer is None:
                 return []
             return [answer.answer.in_locale(locale), answer.answer.in_locale(self._other(locale))]
+        if self._is_about_workplace(field):
+            return self._workplace_answer(field, application, locale)
         return self._experience_answer(field, locale)
 
     @staticmethod
     def _other(locale: Locale) -> Locale:
         return Locale.EN if locale is Locale.PT else Locale.PT
+
+    def _is_about_workplace(self, field: FormField) -> bool:
+        if field.kind not in self._YES_OR_NO_KINDS or self._on_site_filter is None or self._remote_filter is None:
+            return False
+        question = field.question
+        return bool(self._on_site_filter.first_match_in(question) or self._remote_filter.first_match_in(question))
+
+    def _workplace_answer(self, field: FormField, application: JobApplication, locale: Locale) -> list[str]:
+        """Remoto é sempre sim; presencial e híbrido dependem de onde (veja WorkplaceRule)."""
+        question = field.question
+        if not self._on_site_filter.first_match_in(question):
+            words = self._YES
+        elif self._location_policy.mentions_accepted_city(question):
+            words = self._YES
+        elif self._location_policy.accepts_on_site_in(application.location):
+            words = self._YES
+        elif self._location_policy.names_another_city(application.location):
+            words = self._NO
+        else:
+            return []
+        return [words[locale], words[self._other(locale)]]
 
     def _experience_answer(self, field: FormField, locale: Locale) -> list[str]:
         """Sim se todas as tecnologias citadas são conhecidas (CV ou derivadas dele), não se nenhuma é.

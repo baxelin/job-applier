@@ -14,6 +14,7 @@ from job_applier.linkedin.pacer import Pacer
 from job_applier.linkedin.rehearsal_evidence import RehearsalEvidence
 from job_applier.linkedin.run_stop import StopRun
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
+from job_applier.matching.location_policy import LocationPolicy
 from job_applier.models.job_application import JobApplication, ScanStatus
 from job_applier.models.job_posting import JobPosting
 from job_applier.resume.resume_upload_file import ResumeUploadFileLoader
@@ -35,6 +36,7 @@ class EasyApplyRun(ABC):
 
     PENDING = "com pergunta sem resposta"
     CLOSED = "encerradas"
+    UNWANTED = "fora do local aceito"
     UNAVAILABLE = "indisponíveis"
     FAILED = "com erro"
     _CLOSED_REASON = "Vaga encerrada: não aceita mais candidaturas."
@@ -53,6 +55,7 @@ class EasyApplyRun(ABC):
         max_jobs: int | None = None,
         now: Callable[[], datetime] = datetime.now,
         page_parser: JobPageParser | None = None,
+        location_policy: LocationPolicy | None = None,
     ) -> None:
         self._browser = browser
         self._filler = filler
@@ -65,6 +68,7 @@ class EasyApplyRun(ABC):
         self._max_jobs = max_jobs
         self._now = now
         self._page_parser = page_parser or JobPageParser()
+        self._location_policy = location_policy or LocationPolicy([])
         self._guard = SessionGuard()
         self._tally: Counter[str] = Counter()
         self._consecutive_failures = 0
@@ -117,7 +121,7 @@ class EasyApplyRun(ABC):
         self._process(application)
 
     def summary(self) -> str:
-        labels = (self.finished_label, self.PENDING, self.CLOSED, self.UNAVAILABLE, self.FAILED)
+        labels = (self.finished_label, self.PENDING, self.CLOSED, self.UNWANTED, self.UNAVAILABLE, self.FAILED)
         return ", ".join(f"{self._tally[label]} {label}" for label in labels)
 
     def _process(self, application: JobApplication) -> None:
@@ -128,6 +132,10 @@ class EasyApplyRun(ABC):
         self._guard.check(page)
         if self._page_parser.is_closed(page.text):
             self._handle_closed(application)
+            return
+        workplace = self._page_parser.workplace(page.html, job_id)
+        if reason := self._location_policy.skip_reason(workplace, application.title, application.location):
+            self._handle_unwanted(application, reason)
             return
         try:
             form = self._browser.open_application_form()
@@ -167,6 +175,12 @@ class EasyApplyRun(ABC):
         logger.info("%s - %s: %s", application.company, application.title, self._CLOSED_REASON)
         self._tracker.record_unavailable(application, self._CLOSED_REASON)
         self._tally[self.CLOSED] += 1
+
+    def _handle_unwanted(self, application: JobApplication, reason: str) -> None:
+        """Vagas da fila registradas antes da regra de local (ou cuja modalidade mudou) são conferidas aqui."""
+        logger.info("%s - %s: ignorada (%s).", application.company, application.title, reason)
+        self._tracker.record_unavailable(application, reason)
+        self._tally[self.UNWANTED] += 1
 
     def _handle_unavailable(self, application: JobApplication, job_id: str, reason: str) -> None:
         snapshot = self._browser.save_snapshot(f"{self._SNAPSHOT_PREFIX}-{job_id}")

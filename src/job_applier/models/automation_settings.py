@@ -52,6 +52,7 @@ class JobFilters(StrictModel):
     posted_within_hours: int | None = Field(default=None, ge=1)
     minimum_fit_percentage: int = Field(default=0, ge=0, le=100)
     minimum_terms_for_fit: int = Field(default=0, ge=0)
+    on_site_cities: list[NonEmptyText] = []
     sort_by: SearchOrder = SearchOrder.RECENT
 
 
