@@ -14,6 +14,7 @@ from job_applier.models.job_application import ScanRun, ScanStatus
 from job_applier.resume.pdf_exporter import PdfExportError
 from job_applier.storage.application_tracker import ApplicationTracker
 from job_applier.storage.scan_run_repository import ScanRunRepository
+from job_applier.termination import TerminationRequested
 
 
 class BrowserRun(Protocol):
@@ -56,6 +57,10 @@ class ScanCommand[BrowserT: JobPageBrowser]:
             result = ScanResult(ScanStatus.STOPPED, str(error), jobs_seen=0, jobs_recorded=0)
         except KeyboardInterrupt:
             result = ScanResult(ScanStatus.STOPPED, "Interrompida pelo usuário (Ctrl+C).", jobs_seen=0, jobs_recorded=0)
+        except TerminationRequested:
+            result = ScanResult(
+                ScanStatus.STOPPED, "Interrompida pelo sistema (docker stop).", jobs_seen=0, jobs_recorded=0
+            )
         except Exception as error:
             result = ScanResult(ScanStatus.STOPPED, f"Erro inesperado: {error!r}", jobs_seen=0, jobs_recorded=0)
             raise

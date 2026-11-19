@@ -10,6 +10,7 @@ from job_applier.config.json_model_loader import DataFileNotFoundError
 from job_applier.linkedin.job_scanner import ScanResult
 from job_applier.models.job_application import ScanStatus
 from job_applier.storage.scan_run_repository import SqliteScanRunRepository
+from job_applier.termination import TerminationRequested
 from tests.factories import database_for, tracker_for
 
 
@@ -94,6 +95,16 @@ class TestScanCommand:
         assert exit_code == 1
         assert browser.closed
         assert recorded_runs(tmp_path)[0].reason == "Interrompida pelo usuário (Ctrl+C)."
+
+    def test_docker_stop_is_recorded_as_interrupted_by_the_system(self, example_base_data, tmp_path):
+        browser = FakeBrowserSession()
+
+        exit_code = command(tmp_path, TerminationRequested(), browser, FakeBaseDataLoader(example_base_data)).run()
+
+        assert exit_code == 1
+        assert browser.closed
+        [run] = recorded_runs(tmp_path)
+        assert (run.status, run.reason) == (ScanStatus.STOPPED, "Interrompida pelo sistema (docker stop).")
 
     def test_unexpected_error_is_recorded_and_raised(self, example_base_data, tmp_path):
         with pytest.raises(RuntimeError):

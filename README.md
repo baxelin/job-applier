@@ -110,17 +110,18 @@ O WeasyPrint não roda no Windows, então os PDFs só são gerados no Docker e o
 - [x] **Fase 3 – Registro local:** PDFs em `data/cvs/`, SQLite como fonte da verdade e planilha Excel recriada a cada execução.
 - [x] **Fase 4 – Varredura do LinkedIn (só leitura):** login manual, buscas com filtros, extração das vagas, ritmo e parada em bloqueio.
 - [x] **Fase 5 – Vagas externas:** link de candidatura no site da empresa, CV gerado e status "Pendente – aplicar manualmente".
-- [ ] **Fase 6 – Candidatura automática:** entrega = candidaturas enviadas sozinhas, com tudo registrado.
+- [x] **Fase 6 – Candidatura automática:** entrega = candidaturas enviadas sozinhas, com tudo registrado.
   - [x] Abrir o modal da Candidatura Simplificada e mapear as etapas (contato, currículo, perguntas, revisão).
   - [x] Upload do PDF gerado.
   - [x] Respondedor por tipo de campo (texto, número, lista, opção única, caixa de seleção).
   - [x] Pergunta desconhecida: fecha sem enviar, salva a pergunta e marca a vaga como pendente.
   - [x] Modo de ensaio que preenche tudo e para antes do "Enviar", com prints.
-  - [ ] Ensaio em ~20 vagas e revisão dos prints.
+  - [x] Ensaio em vagas reais (10 vagas); a revisão em lote foi substituída pelos prints de cada envio em `data/envios/`.
   - [x] Envio real (comando `aplicar`).
   - [x] Primeiros envios no site: confirmação reconhecida ("Status da candidatura · Candidatura enviada").
   - [x] Busca e envio na mesma execução (comando `buscar-e-aplicar`).
 - [ ] **Fase 7 – Operação:** entrega = projeto rodando sozinho, só com manutenção semanal.
+  - [x] `docker stop` encerra na hora e registra a execução como interrompida.
   - [ ] Agendar a execução em horários variados (cron no host ou agendador no container).
   - [ ] Relatório simples: aplicadas no dia, pendentes e perguntas novas para criar regra.
   - [ ] Rotina semanal: revisar perguntas desconhecidas, termos não reconhecidos e respostas de empresas na planilha.

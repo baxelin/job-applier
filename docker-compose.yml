@@ -5,6 +5,8 @@ services:
     environment:
       TZ: America/Sao_Paulo
     shm_size: "1gb"
+    # O docker stop manda SIGTERM: o programa registra a execução como interrompida e fecha o Firefox
+    stop_grace_period: 30s
     ports:
       # noVNC (Firefox do container) acessível só desta máquina: http://localhost:6080/vnc.html
       - "127.0.0.1:6080:6080"

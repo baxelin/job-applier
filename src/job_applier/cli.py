@@ -30,6 +30,7 @@ from job_applier.storage.database import Database
 from job_applier.storage.excel_report_writer import ExcelReportWriter
 from job_applier.storage.scan_run_repository import SqliteScanRunRepository
 from job_applier.storage.unknown_question_repository import SqliteUnknownQuestionRepository
+from job_applier.termination import TerminationSignal
 
 
 class CommandLine:
@@ -45,7 +46,8 @@ class CommandLine:
         parsed = self._parser().parse_args(arguments)
         self._log.configure()
         try:
-            return self._run_command(parsed)
+            with TerminationSignal():
+                return self._run_command(parsed)
         finally:
             self._log.close()
 
