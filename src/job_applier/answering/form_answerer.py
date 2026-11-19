@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+from job_applier.answering.brazilian_location import BrazilianLocation
 from job_applier.answering.option_matcher import OptionMatcher
 from job_applier.answering.salary_calculator import SalaryCalculator
 from job_applier.matching.keyword_extractor import KeywordExtractor
@@ -19,6 +20,7 @@ class FormAnswerer:
     longo que aparecer na pergunta, o mais específico). Devolve None quando não há resposta segura; nesse
     caso a candidatura fica pendente. Nada é inventado: resposta null, pergunta de salário em vaga no
     exterior (a moeda ainda não foi definida) e campo de busca com sugestões ficam sempre sem resposta.
+    Vaga em inglês localizada no Brasil recebe a pretensão em reais, como as vagas em português.
     """
 
     _CHOICE_KINDS = frozenset({FieldKind.SELECT, FieldKind.RADIO, FieldKind.CHECKBOX})
@@ -38,6 +40,7 @@ class FormAnswerer:
         self._years_filter = WordFilter(answer_book.skill_years.patterns)
         self._answer_filters = [(answer, WordFilter(answer.patterns)) for answer in answer_book.answers]
         self._matcher = matcher or OptionMatcher()
+        self._brazil = BrazilianLocation()
 
     def answer(self, field: FormField, application: JobApplication) -> FieldAnswer | None:
         if field.kind is FieldKind.TYPEAHEAD:
@@ -63,7 +66,7 @@ class FormAnswerer:
         return [answer.answer.in_locale(locale), answer.answer.in_locale(other_locale)]
 
     def _salary_answer(self, question: str, application: JobApplication, locale: Locale) -> list[str]:
-        if locale is not Locale.PT:
+        if locale is not Locale.PT and not self._brazil.contains(application.location):
             return []
         return [str(self._salary.expectation(question, application.description or ""))]
 
@@ -84,8 +87,12 @@ class FormAnswerer:
         return max(matches, key=lambda match: match[0], default=(0, None))[1]
 
     def _choice(self, field: FormField, candidates: Sequence[str]) -> FieldAnswer | None:
-        option = self._matcher.pick(field.options, candidates)
-        return FieldAnswer(text=option.label, option=option) if option else None
+        if field.kind is FieldKind.CHECKBOX:
+            options = self._matcher.pick_many(field.options, candidates)
+        else:
+            option = self._matcher.pick(field.options, candidates)
+            options = (option,) if option else ()
+        return FieldAnswer.choosing(*options) if options else None
 
     @staticmethod
     def _text(field: FormField, text: str) -> FieldAnswer | None:

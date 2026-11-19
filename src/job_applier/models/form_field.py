@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Self
 
 from job_applier.models.base import NonEmptyText, StrictModel
 
@@ -43,7 +44,14 @@ class FormField(StrictModel):
 
 
 class FieldAnswer(StrictModel):
-    """Resposta escolhida para um campo: o texto digitado ou, nos campos de escolha, a opção marcada."""
+    """Resposta escolhida para um campo: o texto digitado ou, nos campos de escolha, as opções marcadas.
+
+    Lista e opção única têm sempre uma opção; caixas de seleção podem ter várias.
+    """
 
     text: NonEmptyText
-    option: FieldOption | None = None
+    options: tuple[FieldOption, ...] = ()
+
+    @classmethod
+    def choosing(cls, *options: FieldOption) -> Self:
+        return cls(text=", ".join(option.label for option in options), options=options)

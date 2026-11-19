@@ -199,7 +199,7 @@ class TestFilling:
         form = open_form([CONTACT_SCREEN])
         field = field_named(form, "Nível de inglês")
 
-        form.fill(field, FieldAnswer(text="Avançado", option=field.options[1]))
+        form.fill(field, FieldAnswer.choosing(field.options[1]))
 
         assert field_named(form, "Nível de inglês").current_answer() == "Avançado"
 
@@ -208,11 +208,11 @@ class TestFilling:
         radio = field_named(form, "Você é PcD?")
         checkbox = field_named(form, "Quais plataformas?")
 
-        form.fill(radio, FieldAnswer(text="No", option=radio.options[1]))
-        form.fill(checkbox, FieldAnswer(text="AWS", option=checkbox.options[0]))
+        form.fill(radio, FieldAnswer.choosing(radio.options[1]))
+        form.fill(checkbox, FieldAnswer.choosing(*checkbox.options))
 
         assert field_named(form, "Você é PcD?").current_answer() == "No"
-        assert field_named(form, "Quais plataformas?").current_answer() == "AWS"
+        assert field_named(form, "Quais plataformas?").current_answer() == "AWS, Outra"
         assert form.read_step().fields_to_answer() == ()
 
     def test_reports_a_control_that_cannot_be_filled(self, open_form):
@@ -246,7 +246,7 @@ class TestAdvancing:
         form = open_form([CONTACT_SCREEN, RESUME_SCREEN])
         answer_field(form, "Pretensão salarial", FieldAnswer(text="2400"))
         field = field_named(form, "Nível de inglês")
-        form.fill(field, FieldAnswer(text="Básico", option=field.options[0]))
+        form.fill(field, FieldAnswer.choosing(field.options[0]))
 
         assert go_to_next_screen(form).page == 2
 

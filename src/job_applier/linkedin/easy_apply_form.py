@@ -119,12 +119,13 @@ class EasyApplyForm(ApplicationForm):
             raise EasyApplyFormError(f"Não consegui preencher '{field.question}': {error.message}") from error
 
     def _apply(self, field: FormField, answer: FieldAnswer) -> None:
-        if answer.option is None:
+        if not answer.options:
             self._control(field.control).fill(answer.text, timeout=self._ACTION_TIMEOUT_MS)
         elif field.kind is FieldKind.SELECT:
-            self._control(field.control).select_option(value=answer.option.control, timeout=self._ACTION_TIMEOUT_MS)
+            self._control(field.control).select_option(value=answer.options[0].control, timeout=self._ACTION_TIMEOUT_MS)
         else:
-            self._click_choice(answer.option.control)
+            for option in answer.options:
+                self._click_choice(option.control)
 
     def upload_resume(self, step: EasyApplyStep, resume: ResumeUploadFile) -> None:
         payload = FilePayload(name=resume.name, mimeType=self._PDF_MIME_TYPE, buffer=resume.content)

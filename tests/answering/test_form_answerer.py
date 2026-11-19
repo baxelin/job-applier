@@ -34,6 +34,7 @@ def answer_book(answer_book_data) -> AnswerBook:
         {"id": "cidade", "patterns": ["city"], "answer": {"pt": "São Paulo", "en": "São Paulo, Brazil"}},
         {"id": "pcd", "patterns": ["pcd", "disability"], "answer": {"pt": "Não", "en": "No"}},
         {"id": "visto", "patterns": ["visa sponsorship"], "answer": None},
+        {"id": "idiomas", "patterns": ["languages"], "answer": {"pt": "Português, Inglês", "en": "Portuguese, English"}},
     ]
     answer_book_data["skill_years"] = {
         "patterns": ["anos de experiência com", "years of experience"],
@@ -93,7 +94,7 @@ class TestChoices:
         answer = answerer.answer(field, application())
 
         assert answer.text == "No"
-        assert answer.option.control == "_r_1_"
+        assert [option.control for option in answer.options] == ["_r_1_"]
 
     def test_picks_the_option_of_a_select(self, answerer):
         field = choice_field("Nível de inglês", "Básico", "Avançado", kind=FieldKind.SELECT)
@@ -109,6 +110,19 @@ class TestChoices:
         field = choice_field("Você tem inglês avançado?", "Yes", "No")
 
         assert answerer.answer(field, application()) is None
+
+    def test_checkbox_marks_every_option_in_the_answer(self, answerer):
+        field = choice_field("Which languages do you speak?", "English", "French", "Portuguese", kind=FieldKind.CHECKBOX)
+
+        answer = answerer.answer(field, application(locale="en"))
+
+        assert [option.label for option in answer.options] == ["English", "Portuguese"]
+        assert answer.text == "English, Portuguese"
+
+    def test_checkbox_without_matching_options_stays_unanswered(self, answerer):
+        field = choice_field("Which languages do you speak?", "French", "German", kind=FieldKind.CHECKBOX)
+
+        assert answerer.answer(field, application(locale="en")) is None
 
 
 class TestSkillYears:
@@ -155,4 +169,11 @@ class TestSalary:
         assert answerer.answer(text_field("Pretensão salarial"), job).text == "3200"
 
     def test_job_abroad_stays_unanswered_because_the_currency_is_undefined(self, answerer):
-        assert answerer.answer(text_field("Pretensão salarial"), application(locale="en")) is None
+        job = application(locale="en", location="Austin, Texas, United States")
+
+        assert answerer.answer(text_field("Pretensão salarial"), job) is None
+
+    def test_job_in_english_located_in_brazil_answers_in_reais(self, answerer):
+        job = application(locale="en", location="Belo Horizonte, Minas Gerais, Brazil")
+
+        assert answerer.answer(text_field("Pretensão salarial"), job).text == "2400"

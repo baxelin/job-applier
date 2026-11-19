@@ -11,7 +11,8 @@ class OptionMatcher:
     Compara em três níveis, do mais ao menos exato: texto igual, sim/não (o LinkedIn mostra "Yes"/"No"
     mesmo em vagas em português) e opção contida na resposta como palavras inteiras ("Avançado" em
     "Avançado (B2)"). Na dúvida entre duas opções não escolhe nenhuma: errar uma resposta custa mais
-    do que deixar a vaga pendente.
+    do que deixar a vaga pendente. Em caixas de seleção (pick_many) a resposta lista as opções que
+    devem ser marcadas ("Portuguese, English"), então todas as contidas nela são escolhidas.
     """
 
     _YES = frozenset({"sim", "yes"})
@@ -22,6 +23,17 @@ class OptionMatcher:
             if option := self._pick_for(options, TextNormalizer.normalize(answer)):
                 return option
         return None
+
+    def pick_many(self, options: Sequence[FieldOption], answers: Sequence[str]) -> tuple[FieldOption, ...]:
+        for answer in answers:
+            normalized = TextNormalizer.normalize(answer)
+            if option := self._pick_for(options, normalized):
+                return (option,)
+            if contained := tuple(
+                option for option in options if self._contains(normalized, TextNormalizer.normalize(option.label))
+            ):
+                return contained
+        return ()
 
     def _pick_for(self, options: Sequence[FieldOption], answer: str) -> FieldOption | None:
         normalized = {option: TextNormalizer.normalize(option.label) for option in options}

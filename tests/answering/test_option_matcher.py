@@ -45,3 +45,24 @@ class TestOptionMatcher:
 
     def test_tries_the_next_language_when_the_first_has_no_match(self, matcher):
         assert matcher.pick(options("Advanced"), ["Avançado", "Advanced"]).label == "Advanced"
+
+
+class TestPickMany:
+    def test_picks_every_option_listed_in_the_answer(self, matcher):
+        picked = matcher.pick_many(options("Java Beginner", "Python Intermediate", "JavaScript Intermediate"),
+                                   ["Python Intermediate, JavaScript Intermediate"])
+
+        assert [option.label for option in picked] == ["Python Intermediate", "JavaScript Intermediate"]
+
+    def test_identical_option_wins_over_contained_ones(self, matcher):
+        picked = matcher.pick_many(options("AWS", "AWS Lambda"), ["AWS"])
+
+        assert [option.label for option in picked] == ["AWS"]
+
+    def test_does_not_match_part_of_a_word(self, matcher):
+        assert matcher.pick_many(options("Java Intermediate"), ["JavaScript Intermediate"]) == ()
+
+    def test_tries_the_next_language_when_the_first_has_no_match(self, matcher):
+        picked = matcher.pick_many(options("Portuguese", "English"), ["Português, Inglês", "Portuguese, English"])
+
+        assert [option.label for option in picked] == ["Portuguese", "English"]
