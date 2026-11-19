@@ -4,8 +4,9 @@ from datetime import date
 from typing import Any
 
 from job_applier.linkedin.easy_apply_form import ApplicationForm, EasyApplyFormError, EasyApplySubmissionUnconfirmedError
-from job_applier.linkedin.easy_apply_run import EasyApplyRun, StopRun
+from job_applier.linkedin.easy_apply_run import EasyApplyRun
 from job_applier.linkedin.rehearsal_evidence import RehearsalEvidence
+from job_applier.linkedin.run_stop import StopRun
 from job_applier.models.job_application import JobApplication, ScanStatus
 
 logger = logging.getLogger(__name__)

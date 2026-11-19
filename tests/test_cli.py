@@ -4,6 +4,7 @@ from job_applier.cli import CommandLine
 from job_applier.linkedin.easy_apply_rehearsal import EasyApplyRehearsal
 from job_applier.linkedin.easy_apply_submission import EasyApplySubmission
 from job_applier.linkedin.job_scanner import JobScanner
+from job_applier.linkedin.search_and_apply import SearchAndApply
 
 
 class TestCommandLine:
@@ -59,3 +60,12 @@ class TestCommandFactories:
 
         assert isinstance(submission, EasyApplySubmission)
         assert submission._retry_pending is retry_pending
+
+    def test_search_and_apply_command_links_the_scanner_to_the_submission(self, tmp_path, example_base_data):
+        command = CommandLine(project_root=tmp_path)._search_and_apply_command(max_jobs=3)
+
+        run = command._scanner_factory(example_base_data, object())
+
+        assert isinstance(run, SearchAndApply)
+        assert run._scanner._on_easy_apply_resume == run._submission.apply_to
+        assert run._scanner._max_jobs == 3

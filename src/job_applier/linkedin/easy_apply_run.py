@@ -12,6 +12,7 @@ from job_applier.linkedin.job_scanner import ScanResult
 from job_applier.linkedin.linkedin_browser import ApplicationBrowser
 from job_applier.linkedin.pacer import Pacer
 from job_applier.linkedin.rehearsal_evidence import RehearsalEvidence
+from job_applier.linkedin.run_stop import StopRun
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
 from job_applier.models.job_application import JobApplication, ScanStatus
 from job_applier.models.job_posting import JobPosting
@@ -20,15 +21,6 @@ from job_applier.storage.application_repository import ApplicationRepository
 from job_applier.storage.application_tracker import ApplicationTracker
 
 logger = logging.getLogger(__name__)
-
-
-class StopRun(Exception):
-    """Encerra a execução inteira, com o motivo e a situação final registrados."""
-
-    def __init__(self, reason: str, status: ScanStatus = ScanStatus.STOPPED) -> None:
-        super().__init__(reason)
-        self.reason = reason
-        self.status = status
 
 
 class EasyApplyRun(ABC):
@@ -116,6 +108,18 @@ class EasyApplyRun(ABC):
             return self._result(ScanStatus.STOPPED, f"Erro inesperado: {error!r}")
         return self._result(ScanStatus.COMPLETED, self._completion_message())
 
+    def apply_to(self, application: JobApplication) -> None:
+        """Uma vaga só, fora da fila: usado pela busca que se candidata logo depois de gerar o CV.
+
+        StopRun e SessionBlockedError sobem para quem chamou, que encerra a execução.
+        """
+        self._ensure_can_continue()
+        self._process(application)
+
+    def summary(self) -> str:
+        labels = (self.finished_label, self.PENDING, self.CLOSED, self.UNAVAILABLE, self.FAILED)
+        return ", ".join(f"{self._tally[label]} {label}" for label in labels)
+
     def _process(self, application: JobApplication) -> None:
         job_id = self._job_id(application)
         logger.info("Vaga: %s - %s", application.company, application.title)
@@ -185,11 +189,9 @@ class EasyApplyRun(ABC):
             )
 
     def _result(self, status: ScanStatus, reason: str) -> ScanResult:
-        labels = (self.finished_label, self.PENDING, self.CLOSED, self.UNAVAILABLE, self.FAILED)
-        summary = ", ".join(f"{self._tally[label]} {label}" for label in labels)
         return ScanResult(
             status=status,
-            reason=f"{reason} Resultado: {summary}.",
+            reason=f"{reason} Resultado: {self.summary()}.",
             jobs_seen=self._tally.total(),
             jobs_recorded=self._tally[self.finished_label],
         )

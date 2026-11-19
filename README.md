@@ -31,11 +31,13 @@ Rode `docker compose build` de novo sempre que o código mudar, porque o código
 | **Enviar** as candidaturas simplificadas | `docker compose run --rm --service-ports app python -m job_applier aplicar` |
 | Enviar abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier aplicar --max-vagas 5` |
 | Enviar e repetir as vagas pendentes de pergunta (depois de cadastrar respostas) | `docker compose run --rm --service-ports app python -m job_applier aplicar --repetir-pendentes` |
+| **Buscar e enviar** na mesma execução | `docker compose run --rm --service-ports app python -m job_applier buscar-e-aplicar` |
+| Buscar e enviar abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier buscar-e-aplicar --max-vagas 10` |
 | Gerar CVs a partir de arquivos `.txt` | `docker compose run --rm app python -m job_applier cv data/vagas` |
 | Recriar a planilha a partir do banco | `docker compose run --rm app python -m job_applier planilha` |
 | Rodar os testes | `docker compose run --rm app pytest` |
 
-Com os comandos `login`, `buscar`, `ensaiar` e `aplicar` em execução, o navegador pode ser acompanhado em <http://localhost:6080/vnc.html>. O login só precisa ser refeito quando a sessão do LinkedIn expirar.
+Com os comandos `login`, `buscar`, `ensaiar`, `aplicar` e `buscar-e-aplicar` em execução, o navegador pode ser acompanhado em <http://localhost:6080/vnc.html>. O login só precisa ser refeito quando a sessão do LinkedIn expirar.
 
 Cada execução também grava o que está fazendo em `data/logs/AAAA-MM-DD.log` ("Abrindo vaga…", "Próxima vaga em 45 s"). Deixe o arquivo aberto no VS Code para acompanhar: se passar alguns minutos sem linha nova, algo travou.
 
@@ -62,6 +64,8 @@ O comando `aplicar` faz o mesmo percurso do ensaio e, na tela final, clica em **
 - Pergunta sem resposta segura: a candidatura não é enviada e a vaga fica pendente, como no ensaio.
 - Cada envio deixa prints, o `respostas.txt` e o print da confirmação em `data/envios/`, e a vaga fica como `Candidatura enviada`.
 - Se o LinkedIn não mostrar a confirmação depois do clique, a execução para e a vaga fica com erro: confira no site antes de tentar de novo, para não enviar a mesma candidatura duas vezes.
+
+O comando `buscar-e-aplicar` junta os dois passos: a busca abre cada vaga, gera o CV e, se for Candidatura Simplificada, envia na hora, antes de passar para a próxima. Vagas externas, ignoradas e pendentes de pergunta ficam registradas como na busca comum. O `--max-vagas` conta as vagas abertas pela busca. Vagas que já estavam na fila de execuções anteriores continuam com o `aplicar`.
 
 ### Onde ficam os resultados
 
@@ -114,7 +118,8 @@ O WeasyPrint não roda no Windows, então os PDFs só são gerados no Docker e o
   - [x] Modo de ensaio que preenche tudo e para antes do "Enviar", com prints.
   - [ ] Ensaio em ~20 vagas e revisão dos prints.
   - [x] Envio real (comando `aplicar`).
-  - [ ] Primeiros envios no site e ajuste da confirmação.
+  - [x] Primeiros envios no site: confirmação reconhecida ("Status da candidatura · Candidatura enviada").
+  - [x] Busca e envio na mesma execução (comando `buscar-e-aplicar`).
 - [ ] **Fase 7 – Operação:** entrega = projeto rodando sozinho, só com manutenção semanal.
   - [ ] Agendar a execução em horários variados (cron no host ou agendador no container).
   - [ ] Relatório simples: aplicadas no dia, pendentes e perguntas novas para criar regra.

@@ -6,12 +6,13 @@ from datetime import date
 from job_applier.linkedin.job_page_parser import JobExtractionError, JobPageParser
 from job_applier.linkedin.linkedin_browser import JobBrowser
 from job_applier.linkedin.pacer import Pacer
+from job_applier.linkedin.run_stop import StopRun
 from job_applier.linkedin.search_results_parser import JobCard, SearchResultsParser
 from job_applier.linkedin.search_url_builder import LinkedInSearchUrlBuilder
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
 from job_applier.matching.word_filter import WordFilter
 from job_applier.models.automation_settings import AutomationSettings, SearchQuery
-from job_applier.models.job_application import ScanStatus
+from job_applier.models.job_application import JobApplication, ScanStatus
 from job_applier.models.job_posting import ApplyType, JobPosting
 from job_applier.resume.pdf_exporter import PdfExportError
 from job_applier.resume.resume_generator import JobEvaluation, ResumeGenerator
@@ -29,13 +30,6 @@ class ScanResult:
     jobs_recorded: int
 
 
-class _StopScan(Exception):
-    def __init__(self, status: ScanStatus, reason: str) -> None:
-        super().__init__(reason)
-        self.status = status
-        self.reason = reason
-
-
 class JobScanner:
     """Percorre as buscas do config.json e registra cada vaga nova com análise e CV, sem se candidatar.
 
@@ -44,7 +38,9 @@ class JobScanner:
     vaga encerrada, empresa bloqueada não detectada no card, aderência abaixo do mínimo) é registrado
     como ignorado, sem CV. Também é ignorada a vaga repetida, com mesma empresa e título de outra já
     registrada: anunciantes de vagas fantasma republicam o mesmo título em várias cidades.
-    Vagas com candidatura no site da empresa ganham CV e ficam pendentes de aplicação manual.
+    Vagas com candidatura no site da empresa ganham CV e ficam pendentes de aplicação manual. Com
+    on_easy_apply_resume, cada vaga de Candidatura Simplificada é entregue a ele logo depois de ganhar o CV
+    (a busca que já se candidata); um StopRun lançado por ele encerra a varredura.
 
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
     ou quando várias páginas seguidas não forem reconhecidas (provável mudança de layout).
@@ -61,6 +57,7 @@ class JobScanner:
         pacer: Pacer,
         today: Callable[[], date] = date.today,
         max_jobs: int | None = None,
+        on_easy_apply_resume: Callable[[JobApplication], None] | None = None,
     ) -> None:
         self._browser = browser
         self._settings = settings
@@ -70,6 +67,7 @@ class JobScanner:
         self._pacer = pacer
         self._today = today
         self._max_jobs = max_jobs
+        self._on_easy_apply_resume = on_easy_apply_resume
         self._url_builder = LinkedInSearchUrlBuilder(settings.filters)
         self._search_parser = SearchResultsParser()
         self._job_parser = JobPageParser()
@@ -90,7 +88,7 @@ class JobScanner:
             self._ensure_can_continue()
             for search in self._settings.searches:
                 self._scan_search(search)
-        except _StopScan as stop:
+        except StopRun as stop:
             return self._result(stop.status, stop.reason)
         except SessionBlockedError as blocked:
             snapshot = self._browser.save_snapshot("bloqueio")
@@ -162,17 +160,21 @@ class JobScanner:
         evaluation = self._generator.evaluate(posting.description)
         if reason := self._skip_reason(posting, evaluation):
             self._tracker.record_skipped(evaluation, posting, reason)
+            self._jobs_recorded += 1
             logger.info("Ignorada: %s - %s (%s)", posting.description.company, posting.description.title, reason)
-        else:
-            self._tracker.record(self._generator.generate_for(evaluation), posting)
-            self._resumes_left_today -= 1
-            logger.info(
-                "CV gerado: %s - %s (aderência %d%%)",
-                posting.description.company,
-                posting.description.title,
-                evaluation.fit.percentage,
-            )
+            return
+
+        application = self._tracker.record(self._generator.generate_for(evaluation), posting)
+        self._resumes_left_today -= 1
         self._jobs_recorded += 1
+        logger.info(
+            "CV gerado: %s - %s (aderência %d%%)",
+            posting.description.company,
+            posting.description.title,
+            evaluation.fit.percentage,
+        )
+        if posting.apply_type is ApplyType.EASY_APPLY and self._on_easy_apply_resume:
+            self._on_easy_apply_resume(application)
 
     def _skip_reason(self, posting: JobPosting, evaluation: JobEvaluation) -> str | None:
         description = posting.description
@@ -192,17 +194,16 @@ class JobScanner:
 
     def _ensure_can_continue(self) -> None:
         if self._resumes_left_today <= 0:
-            raise _StopScan(ScanStatus.COMPLETED, "Limite diário de vagas atingido.")
+            raise StopRun("Limite diário de vagas atingido.", ScanStatus.COMPLETED)
         if self._max_jobs is not None and self._jobs_seen >= self._max_jobs:
-            raise _StopScan(ScanStatus.COMPLETED, f"Limite desta execução atingido ({self._max_jobs} vagas).")
+            raise StopRun(f"Limite desta execução atingido ({self._max_jobs} vagas).", ScanStatus.COMPLETED)
 
     def _handle_extraction_error(self, error: JobExtractionError) -> None:
         snapshot = self._browser.save_snapshot(f"vaga-{error.linkedin_id}")
         self._consecutive_extraction_errors += 1
         logger.warning("%s Página salva em %s.", error, snapshot)
         if self._consecutive_extraction_errors >= self._settings.scan.max_consecutive_extraction_errors:
-            raise _StopScan(
-                ScanStatus.STOPPED,
+            raise StopRun(
                 f"{self._consecutive_extraction_errors} páginas de vaga seguidas não foram reconhecidas; "
                 f"o layout do LinkedIn pode ter mudado. Última página salva em {snapshot}.",
             )
