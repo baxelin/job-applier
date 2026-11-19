@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime
 
 from job_applier.matching.text_normalizer import TextNormalizer
+from job_applier.matching.word_filter import WordFilter
 from job_applier.models.job_application import ApplicationStatus, JobApplication
 from job_applier.models.job_posting import ApplyType
 from job_applier.storage.database import Database
@@ -23,6 +24,10 @@ class ApplicationRepository(ABC):
     @abstractmethod
     def has_company_and_title(self, company: str, title: str) -> bool:
         """Se já existe vaga com a mesma empresa e o mesmo título (ignorando maiúsculas, acentos e espaços)."""
+
+    @abstractmethod
+    def company_with_title_in(self, title: str, text: str) -> str | None:
+        """A empresa de uma vaga já registrada com este título cujo nome aparece no texto (o card da busca)."""
 
     @abstractmethod
     def count_processed_on(self, day: date) -> int:
@@ -96,6 +101,23 @@ class SqliteApplicationRepository(ApplicationRepository):
         with self._database.connect() as connection:
             rows = connection.execute("SELECT company, title FROM job_applications").fetchall()
         return any(self._comparable(row["company"], row["title"]) == wanted for row in rows)
+
+    def company_with_title_in(self, title: str, text: str) -> str | None:
+        wanted = self._comparable_text(title)
+        with self._database.connect() as connection:
+            rows = connection.execute("SELECT DISTINCT company, title FROM job_applications").fetchall()
+        return next(
+            (
+                row["company"]
+                for row in rows
+                if self._comparable_text(row["title"]) == wanted and WordFilter([row["company"]]).first_match_in(text)
+            ),
+            None,
+        )
+
+    @staticmethod
+    def _comparable_text(text: str) -> str:
+        return " ".join(TextNormalizer.normalize(text).split())
 
     @staticmethod
     def _comparable(company: str, title: str) -> tuple[str, str]:

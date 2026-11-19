@@ -233,6 +233,14 @@ class TestJobScanner:
         assert notes[JobPosting.url_for("2")][0] is ApplicationStatus.MANUAL_APPLICATION_PENDING
         assert notes[JobPosting.url_for("3")][0] is ApplicationStatus.MANUAL_APPLICATION_PENDING
 
+    def test_discards_a_repost_from_the_results_list_without_opening(self, make_scanner, applications):
+        applications.save(application(company="Empresa X", title="Desenvolvedor Python Júnior"))
+        browser = FakeBrowser([[("9", "Desenvolvedor Python Júnior", "Empresa X"), "10"]], {"10": dev_job()})
+
+        make_scanner(browser).run()
+
+        assert browser.opened_jobs == ["10"]
+
     def test_discards_blocked_companies_from_the_results_list_without_opening(self, make_scanner, applications):
         browser = FakeBrowser(
             [[("1", "Desenvolvedor Júnior", "BairesDev"), ("2", "Desenvolvedor Júnior", "Empresa Boa")]],

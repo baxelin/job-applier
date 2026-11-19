@@ -143,11 +143,17 @@ class JobScanner:
         self._scan_job(card.linkedin_id)
 
     def _card_skip_reason(self, card: JobCard) -> str | None:
-        """Descarta pela lista de resultados o que dá para saber sem abrir a vaga."""
+        """Descarta pela lista de resultados o que dá para saber sem abrir a vaga.
+
+        A republicação (mesma empresa e mesmo título de uma vaga já registrada, com outro link) também é
+        reconhecida pelo card, que traz o título e o nome da empresa.
+        """
         if company := self._company_filter.first_match_in(card.text):
             return f"empresa bloqueada: {company}"
         if card.title and (word := self._title_filter.first_match_in(card.title)):
             return f"título contém '{word}'"
+        if card.title and (company := self._applications.company_with_title_in(card.title, card.text)):
+            return f"republicação: {company} já tem vaga registrada com este título"
         return None
 
     def _save_first_search_page(self) -> None:

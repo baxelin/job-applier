@@ -69,6 +69,14 @@ class TestHasCompanyAndTitle:
 
         assert not applications.has_company_and_title("Empresa Y", "Desenvolvedor Júnior")
 
+    def test_finds_a_registered_company_with_the_same_title_in_a_search_card(self, applications):
+        applications.save(application(company="Coda Search│Staffing", title="Jr. AI Engineer"))
+        card = "Jr. AI Engineer (Vaga verificada) Jr. AI Engineer Coda Search│Staffing Brasil (Remoto)"
+
+        assert applications.company_with_title_in("jr.  ai engineer", card) == "Coda Search│Staffing"
+        assert applications.company_with_title_in("Jr. AI Engineer", "Jr. AI Engineer Outra Empresa") is None
+        assert applications.company_with_title_in("Senior AI Engineer", card) is None
+
 
 class TestListReadyForEasyApply:
     def test_lists_only_easy_apply_jobs_with_resume(self, applications):
