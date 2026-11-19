@@ -60,3 +60,17 @@ class TestLinkedInSearchUrlBuilder:
         url = LinkedInSearchUrlBuilder(FILTERS).build(search, page=1)
 
         assert query(url) == {"geoId": ["1"], "start": ["25"]}
+
+    def test_window_since_the_last_search_replaces_the_general_one(self):
+        search = SearchQuery(keywords="Dev", location="Brasil")
+
+        assert query(LinkedInSearchUrlBuilder(FILTERS).build(search, window_hours=49))["f_TPR"] == ["r176400"]
+
+    def test_window_also_applies_to_a_custom_url(self):
+        search = SearchQuery(
+            keywords="ignorado", location="ignorado", url="https://www.linkedin.com/jobs/search/?geoId=1&f_TPR=r86400"
+        )
+
+        url = LinkedInSearchUrlBuilder(FILTERS).build(search, window_hours=49)
+
+        assert query(url) == {"geoId": ["1"], "f_TPR": ["r176400"]}

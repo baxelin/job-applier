@@ -98,6 +98,13 @@ class Database:
         """
         ALTER TABLE job_applications ADD COLUMN applied_at TEXT;
         """,
+        # 5: quando cada busca foi percorrida inteira (a próxima pede só o que foi publicado depois)
+        """
+        CREATE TABLE search_progress (
+            search_key TEXT PRIMARY KEY,
+            completed_at TEXT NOT NULL
+        );
+        """,
     )
 
     def __init__(self, path: Path) -> None:

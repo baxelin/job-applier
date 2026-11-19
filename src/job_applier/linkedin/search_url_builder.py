@@ -26,9 +26,12 @@ class LinkedInSearchUrlBuilder:
     def __init__(self, filters: JobFilters) -> None:
         self._filters = filters
 
-    def build(self, search: SearchQuery, page: int = 0) -> str:
+    def build(self, search: SearchQuery, page: int = 0, window_hours: int | None = None) -> str:
+        """window_hours substitui filters.posted_within_hours (a janela desde a última busca completa)."""
+        hours = window_hours or self._filters.posted_within_hours
         if search.url:
-            return self._with_page(str(search.url), page)
+            url = str(search.url)
+            return self._with_page(self._with_window(url, window_hours) if window_hours else url, page)
 
         workplace_types = search.workplace_types or self._filters.workplace_types
         parameters = {"keywords": search.keywords, "location": search.location}
@@ -36,9 +39,19 @@ class LinkedInSearchUrlBuilder:
             parameters["f_E"] = self._codes(self._EXPERIENCE_CODES, self._filters.experience_levels)
         parameters["f_WT"] = self._codes(self._WORKPLACE_CODES, workplace_types)
         parameters["sortBy"] = self._ORDER_CODES[self._filters.sort_by]
-        if self._filters.posted_within_hours:
-            parameters["f_TPR"] = f"r{self._filters.posted_within_hours * 3600}"
+        if hours:
+            parameters["f_TPR"] = self._window_code(hours)
         return self._with_page(f"{self._BASE_URL}?{urlencode(parameters)}", page)
+
+    @staticmethod
+    def _window_code(hours: int) -> str:
+        return f"r{hours * 3600}"
+
+    def _with_window(self, url: str, hours: int) -> str:
+        parts = urlsplit(url)
+        parameters = [(key, value) for key, value in parse_qsl(parts.query) if key != "f_TPR"]
+        parameters.append(("f_TPR", self._window_code(hours)))
+        return urlunsplit(parts._replace(query=urlencode(parameters)))
 
     def _with_page(self, url: str, page: int) -> str:
         parts = urlsplit(url)

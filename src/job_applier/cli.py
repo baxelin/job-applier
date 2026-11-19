@@ -33,6 +33,7 @@ from job_applier.storage.application_tracker import ApplicationTracker
 from job_applier.storage.database import Database
 from job_applier.storage.excel_report_writer import ExcelReportWriter
 from job_applier.storage.scan_run_repository import SqliteScanRunRepository
+from job_applier.storage.search_progress_repository import SqliteSearchProgressRepository
 from job_applier.storage.unknown_question_repository import SqliteUnknownQuestionRepository
 from job_applier.termination import TerminationSignal
 
@@ -180,6 +181,7 @@ class CommandLine:
             Pacer(base_data.settings),
             max_jobs=max_jobs,
             on_easy_apply_resume=on_easy_apply_resume,
+            progress=SqliteSearchProgressRepository(self._database),
         )
 
     def _rehearsal_command(self, max_jobs: int, retry_pending: bool) -> ScanCommand[LinkedInBrowser]:

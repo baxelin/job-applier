@@ -52,7 +52,7 @@ class TestDatabase:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
             tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
 
-        assert version == 4
+        assert version == 5
         assert {"job_applications", "unknown_questions", "scan_runs"} <= tables
 
     def test_migrates_a_version_1_database_keeping_its_data(self, tmp_path):

@@ -67,11 +67,17 @@ class SearchQuery(StrictModel):
     workplace_types: list[WorkplaceType] | None = Field(default=None, min_length=1)
     url: HttpUrl | None = None
 
+    def key(self) -> str:
+        """Identifica a busca entre execuções; mudar texto, local, modalidades ou URL faz dela outra busca."""
+        workplaces = ",".join(sorted(self.workplace_types or []))
+        return f"{self.keywords}|{self.location}|{workplaces}|{self.url or ''}"
+
 
 class ScanSettings(StrictModel):
     """Varredura de vagas no LinkedIn."""
 
     max_pages_per_search: int = Field(ge=1)
+    window_margin_hours: int = Field(default=24, ge=0)
     max_consecutive_extraction_errors: int = Field(ge=1)
     login_timeout_minutes: int = Field(ge=1)
 

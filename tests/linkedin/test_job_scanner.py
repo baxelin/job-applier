@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -13,11 +13,16 @@ from job_applier.models.job_posting import JobPosting
 from job_applier.resume.resume_archive import ResumeArchive
 from job_applier.resume.resume_generator import ResumeGenerator
 from job_applier.storage.application_repository import SqliteApplicationRepository
+from job_applier.storage.search_progress_repository import (
+    SearchProgressRepository,
+    SqliteSearchProgressRepository,
+)
 from tests.factories import database_for, tracker_for
 from tests.linkedin.pages import current_job_page, job_page, search_page
 from tests.storage.conftest import application
 
 TODAY = date(2026, 10, 29)
+NOW = datetime(2026, 10, 29, 9, 0)
 
 
 class FakeBrowser(JobBrowser):
@@ -31,8 +36,10 @@ class FakeBrowser(JobBrowser):
         self._job_url = job_url
         self.opened_jobs: list[str] = []
         self.snapshots: list[str] = []
+        self.searched_urls: list[str] = []
 
     def open_search(self, url: str) -> PageSnapshot:
+        self.searched_urls.append(url)
         start = int(parse_qs(urlsplit(url).query).get("start", ["0"])[0])
         page = start // 25
         ids = self._search_pages[page] if page < len(self._search_pages) else []
@@ -64,7 +71,13 @@ def applications(tmp_path) -> SqliteApplicationRepository:
 
 @pytest.fixture
 def make_scanner(example_base_data, applications, tmp_path):
-    def build(browser: JobBrowser, max_jobs: int | None = None, **settings_changes) -> JobScanner:
+    def build(
+        browser: JobBrowser,
+        max_jobs: int | None = None,
+        progress: SearchProgressRepository | None = None,
+        now=lambda: NOW,
+        **settings_changes,
+    ) -> JobScanner:
         settings = example_base_data.settings.model_copy(
             update={"searches": example_base_data.settings.searches[:1], **settings_changes}
         )
@@ -80,6 +93,8 @@ def make_scanner(example_base_data, applications, tmp_path):
             Pacer(settings, sleep=lambda seconds: None),
             today=lambda: TODAY,
             max_jobs=max_jobs,
+            progress=progress,
+            now=now,
         )
 
     return build
@@ -98,6 +113,37 @@ class TestJobScanner:
         assert recorded[JobPosting.url_for("1")].status is ApplicationStatus.CV_GENERATED
         assert recorded[JobPosting.url_for("1")].resume_path.endswith(".pdf")
         assert recorded[JobPosting.url_for("1")].apply_type == "candidatura_simplificada"
+
+    def test_next_run_asks_only_for_jobs_published_since_the_completed_search(self, make_scanner, tmp_path):
+        progress = SqliteSearchProgressRepository(database_for(tmp_path))
+        make_scanner(FakeBrowser([["1"]], {"1": dev_job()}), progress=progress).run()
+        browser = FakeBrowser([["2"]], {"2": dev_job("Desenvolvedor Vue Júnior")})
+
+        make_scanner(browser, progress=progress, now=lambda: NOW + timedelta(hours=26)).run()
+
+        assert parse_qs(urlsplit(browser.searched_urls[0]).query)["f_TPR"] == [f"r{(26 + 24) * 3600}"]
+
+    def test_a_search_stopped_by_the_run_limit_keeps_its_window(self, make_scanner, tmp_path, example_base_data):
+        progress = SqliteSearchProgressRepository(database_for(tmp_path))
+        make_scanner(FakeBrowser([["1", "2"]], {"1": dev_job()}), max_jobs=1, progress=progress).run()
+
+        assert progress.last_completed(example_base_data.settings.searches[0].key()) is None
+
+    def test_a_search_that_reaches_the_end_is_marked_with_its_start(self, make_scanner, tmp_path, example_base_data):
+        progress = SqliteSearchProgressRepository(database_for(tmp_path))
+        make_scanner(FakeBrowser([["1"]], {"1": dev_job()}), progress=progress).run()
+
+        assert progress.last_completed(example_base_data.settings.searches[0].key()) == NOW
+
+    def test_reads_more_than_three_pages_and_stops_when_a_page_repeats(self, make_scanner, example_base_data):
+        scan = example_base_data.settings.scan.model_copy(update={"max_pages_per_search": 10})
+        pages = [[str(number)] for number in range(1, 6)] + [["5"]] * 5
+        browser = FakeBrowser(pages, {str(number): dev_job(f"Dev {number} Júnior") for number in range(1, 6)})
+
+        make_scanner(browser, scan=scan).run()
+
+        assert browser.opened_jobs == ["1", "2", "3", "4", "5"]
+        assert len(browser.searched_urls) == 6
 
     def test_follows_pages_until_an_empty_one(self, make_scanner):
         browser = FakeBrowser([["1"], ["2"]], {"1": dev_job(), "2": dev_job("Desenvolvedor Vue Júnior")})

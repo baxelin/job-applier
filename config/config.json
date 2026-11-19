@@ -109,7 +109,7 @@
     "summary_skill_count": 4
   },
   "scan": {
-    "max_pages_per_search": 3,
+    "max_pages_per_search": 10,
     "max_consecutive_extraction_errors": 3,
     "login_timeout_minutes": 10
   }

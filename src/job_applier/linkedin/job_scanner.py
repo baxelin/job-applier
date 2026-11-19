@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from job_applier.linkedin.job_page_parser import JobExtractionError, JobPageParser
 from job_applier.linkedin.linkedin_browser import JobBrowser
@@ -9,6 +9,7 @@ from job_applier.linkedin.pacer import Pacer
 from job_applier.linkedin.run_stop import StopRun
 from job_applier.linkedin.search_results_parser import JobCard, SearchResultsParser
 from job_applier.linkedin.search_url_builder import LinkedInSearchUrlBuilder
+from job_applier.linkedin.search_window import SearchWindow
 from job_applier.linkedin.session_guard import SessionBlockedError, SessionGuard
 from job_applier.matching.location_policy import LocationPolicy
 from job_applier.matching.word_filter import WordFilter
@@ -19,6 +20,7 @@ from job_applier.resume.pdf_exporter import PdfExportError
 from job_applier.resume.resume_generator import JobEvaluation, ResumeGenerator
 from job_applier.storage.application_repository import ApplicationRepository
 from job_applier.storage.application_tracker import ApplicationTracker
+from job_applier.storage.search_progress_repository import SearchProgressRepository
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,10 @@ class JobScanner:
     on_easy_apply_resume, cada vaga de Candidatura Simplificada é entregue a ele logo depois de ganhar o CV
     (a busca que já se candidata); um StopRun lançado por ele encerra a varredura.
 
+    Cada busca pede só as vagas publicadas desde a última vez que foi percorrida inteira (SearchWindow) e
+    segue de página em página até os resultados acabarem, até max_pages_per_search. Só a busca que chega ao
+    fim conta como percorrida: a interrompida pelo limite repete a mesma janela na próxima execução.
+
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
     ou quando várias páginas seguidas não forem reconhecidas (provável mudança de layout).
     Um erro inesperado também encerra a varredura, mas mantendo a contagem do que já foi feito.
@@ -59,6 +65,8 @@ class JobScanner:
         today: Callable[[], date] = date.today,
         max_jobs: int | None = None,
         on_easy_apply_resume: Callable[[JobApplication], None] | None = None,
+        progress: SearchProgressRepository | None = None,
+        now: Callable[[], datetime] = datetime.now,
     ) -> None:
         self._browser = browser
         self._settings = settings
@@ -69,6 +77,10 @@ class JobScanner:
         self._today = today
         self._max_jobs = max_jobs
         self._on_easy_apply_resume = on_easy_apply_resume
+        self._now = now
+        self._window = SearchWindow(
+            settings.filters.posted_within_hours, settings.scan.window_margin_hours, progress, now
+        )
         self._url_builder = LinkedInSearchUrlBuilder(settings.filters)
         self._search_parser = SearchResultsParser()
         self._job_parser = JobPageParser()
@@ -103,22 +115,32 @@ class JobScanner:
         return self._result(ScanStatus.COMPLETED, "Todas as buscas foram percorridas.")
 
     def _scan_search(self, search: SearchQuery) -> None:
-        logger.info("Busca: %s (%s)", search.keywords, search.location)
+        started_at = self._now()
+        hours = self._window.hours_for(search)
+        window = f"publicadas nas últimas {hours} h" if hours else "sem limite de data"
+        logger.info("Busca: %s (%s), %s", search.keywords, search.location, window)
+        previous_ids: list[str] | None = None
         for page in range(self._settings.scan.max_pages_per_search):
             self._pacer.between_actions()
-            snapshot = self._browser.open_search(self._url_builder.build(search, page))
+            snapshot = self._browser.open_search(self._url_builder.build(search, page, hours))
             self._guard.check(snapshot)
             self._save_first_search_page()
             cards = self._search_parser.cards(snapshot.html)
-            if not cards:
-                return
+            ids = [card.linkedin_id for card in cards]
+            if not cards or ids == previous_ids:
+                break
+            previous_ids = ids
             for card in cards:
-                if self._applications.exists(JobPosting.url_for(card.linkedin_id)):
-                    continue
-                if reason := self._card_skip_reason(card):
-                    logger.info("Pulada na lista, sem abrir: vaga %s (%s)", card.linkedin_id, reason)
-                    continue
-                self._scan_job(card.linkedin_id)
+                self._consider(card)
+        self._window.mark_completed(search, started_at)
+
+    def _consider(self, card: JobCard) -> None:
+        if self._applications.exists(JobPosting.url_for(card.linkedin_id)):
+            return
+        if reason := self._card_skip_reason(card):
+            logger.info("Pulada na lista, sem abrir: vaga %s (%s)", card.linkedin_id, reason)
+            return
+        self._scan_job(card.linkedin_id)
 
     def _card_skip_reason(self, card: JobCard) -> str | None:
         """Descarta pela lista de resultados o que dá para saber sem abrir a vaga."""
