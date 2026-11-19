@@ -85,3 +85,26 @@ python -m venv .venv
 ```
 
 O WeasyPrint não roda no Windows, então os PDFs só são gerados no Docker e o teste de PDF é pulado localmente.
+
+## Roadmap
+
+- [x] **Fase 0 – Preparação:** repositório, estrutura de pastas, Docker com Playwright (Firefox).
+- [x] **Fase 1 – Dados base:** CV bilíngue com tags, glossário de termos, respostas e configuração validados com Pydantic.
+- [x] **Fase 2 – Gerador de CV:** extração de termos, pontuação, aderência e PDF adaptado a cada vaga.
+- [x] **Fase 3 – Registro local:** PDFs em `data/cvs/`, SQLite como fonte da verdade e planilha Excel recriada a cada execução.
+- [x] **Fase 4 – Varredura do LinkedIn (só leitura):** login manual, buscas com filtros, extração das vagas, ritmo e parada em bloqueio.
+- [x] **Fase 5 – Vagas externas:** link de candidatura no site da empresa, CV gerado e status "Pendente – aplicar manualmente".
+- [ ] **Fase 6 – Candidatura automática:** entrega = candidaturas enviadas sozinhas, com tudo registrado.
+  - [x] Abrir o modal da Candidatura Simplificada e mapear as etapas (contato, currículo, perguntas, revisão).
+  - [x] Upload do PDF gerado.
+  - [x] Respondedor por tipo de campo (texto, número, lista, opção única, caixa de seleção).
+  - [x] Pergunta desconhecida: fecha sem enviar, salva a pergunta e marca a vaga como pendente.
+  - [x] Modo de ensaio que preenche tudo e para antes do "Enviar", com prints.
+  - [ ] Ensaio em ~20 vagas e revisão dos prints.
+  - [ ] Envio real com limite diário baixo por uma semana.
+  - [ ] Aumentar o limite aos poucos.
+- [ ] **Fase 7 – Operação:** entrega = projeto rodando sozinho, só com manutenção semanal.
+  - [ ] Agendar a execução em horários variados (cron no host ou agendador no container).
+  - [ ] Relatório simples: aplicadas no dia, pendentes e perguntas novas para criar regra.
+  - [ ] Rotina semanal: revisar perguntas desconhecidas, termos não reconhecidos e respostas de empresas na planilha.
+  - [ ] README de operação: como subir, refazer o login e adicionar regras.
