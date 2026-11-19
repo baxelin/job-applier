@@ -24,9 +24,15 @@ class EasyApplySubmission(EasyApplyRun):
     _SNAPSHOT_PREFIX = "envio"
 
     def __init__(
-        self, *args: Any, daily_limit: int | None = None, today: Callable[[], date] = date.today, **kwargs: Any
+        self,
+        *args: Any,
+        daily_limit: int | None = None,
+        retry_pending: bool = False,
+        today: Callable[[], date] = date.today,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
+        self._retry_pending = retry_pending
         self._daily_limit = daily_limit
         self._today = today
         self._sent_before_run: int | None = None
@@ -36,7 +42,7 @@ class EasyApplySubmission(EasyApplyRun):
         return "enviadas"
 
     def _jobs(self) -> list[JobApplication]:
-        jobs = self._applications.list_ready_for_submission()
+        jobs = self._applications.list_ready_for_submission(self._retry_pending)
         return jobs if self._max_jobs is None else jobs[: self._max_jobs]
 
     def _ensure_can_continue(self) -> None:

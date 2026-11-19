@@ -2,6 +2,7 @@ import pytest
 
 from job_applier.cli import CommandLine
 from job_applier.linkedin.easy_apply_rehearsal import EasyApplyRehearsal
+from job_applier.linkedin.easy_apply_submission import EasyApplySubmission
 from job_applier.linkedin.job_scanner import JobScanner
 
 
@@ -49,3 +50,12 @@ class TestCommandFactories:
 
         assert isinstance(rehearsal, EasyApplyRehearsal)
         assert rehearsal._retry_pending is retry_pending
+
+    @pytest.mark.parametrize("retry_pending", [True, False])
+    def test_submission_command_builds_the_submission(self, tmp_path, example_base_data, retry_pending):
+        command = CommandLine(project_root=tmp_path)._submission_command(max_jobs=3, retry_pending=retry_pending)
+
+        submission = command._scanner_factory(example_base_data, object())
+
+        assert isinstance(submission, EasyApplySubmission)
+        assert submission._retry_pending is retry_pending

@@ -17,11 +17,33 @@ class Answer(StrictModel):
     answer: LocalizedText | None = None
 
 
+class YearsArea(StrictModel):
+    """Área de atuação sem tecnologia do glossário ("desenvolvimento de software", "APIs") e os anos declarados."""
+
+    patterns: list[NonEmptyText] = Field(min_length=1)
+    years: float = Field(ge=0)
+
+
 class SkillYearsRule(StrictModel):
-    """Perguntas do tipo "quantos anos de experiência com X": o valor vem das skills do currículo."""
+    """Perguntas do tipo "quantos anos de experiência com X": o valor vem das skills do currículo.
+
+    Quando a pergunta não cita tecnologia do glossário, vale a área cujo padrão aparecer nela (vence o mais
+    longo); sem área, a pergunta fica sem resposta.
+    """
 
     patterns: list[NonEmptyText] = Field(min_length=1)
     default_years: int = Field(ge=0)
+    areas: list[YearsArea] = []
+
+
+class ExperienceRule(StrictModel):
+    """Perguntas de sim/não sobre experiência com tecnologias ("Do you have experience with SAP?").
+
+    Responde sim quando todas as tecnologias citadas estão no CV e não quando nenhuma está; misturado ou
+    sem tecnologia reconhecida, fica sem resposta. Vale só para campos de escolha, nunca para texto livre.
+    """
+
+    patterns: list[NonEmptyText] = Field(min_length=1)
 
 
 class SalaryRule(StrictModel):
@@ -49,6 +71,7 @@ class AnswerBook(StrictModel):
     answers: list[Answer] = Field(min_length=1)
     skill_years: SkillYearsRule
     salary: SalaryRule
+    experience: ExperienceRule | None = None
 
     @model_validator(mode="after")
     def _ids_are_unique(self) -> Self:

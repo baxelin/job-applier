@@ -123,6 +123,15 @@ class TestSubmissions:
 
         assert listed == ["ensaiada", "nova-alta", "nova-baixa"]
 
+    def test_pending_jobs_come_last_only_when_asked_and_failed_ones_never(self, applications):
+        applications.save(easy_apply("nova", fit=10))
+        applications.save(easy_apply("pendente", fit=99, status=ApplicationStatus.UNKNOWN_QUESTION_PENDING))
+        applications.save(easy_apply("erro", fit=99, status=ApplicationStatus.FAILED))
+
+        listed = [item.job_key for item in applications.list_ready_for_submission(retry_pending=True)]
+
+        assert listed == ["nova", "pendente"]
+
     def test_counts_applications_sent_on_the_day(self, applications):
         applications.save(easy_apply("ontem"))
         applications.save(easy_apply("hoje"))

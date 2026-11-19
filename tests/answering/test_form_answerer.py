@@ -34,12 +34,18 @@ def answer_book(answer_book_data) -> AnswerBook:
         {"id": "cidade", "patterns": ["city"], "answer": {"pt": "São Paulo", "en": "São Paulo, Brazil"}},
         {"id": "pcd", "patterns": ["pcd", "disability"], "answer": {"pt": "Não", "en": "No"}},
         {"id": "visto", "patterns": ["visa sponsorship"], "answer": None},
+        {"id": "aws-nao-responder", "patterns": ["experience with aws in production"], "answer": None},
         {"id": "idiomas", "patterns": ["languages"], "answer": {"pt": "Português, Inglês", "en": "Portuguese, English"}},
     ]
     answer_book_data["skill_years"] = {
-        "patterns": ["anos de experiência com", "years of experience"],
+        "patterns": ["anos de experiência com", "years of experience", "quantos anos", "how many years"],
         "default_years": 0,
+        "areas": [
+            {"patterns": ["desenvolvimento", "software development"], "years": 2},
+            {"patterns": ["desenvolvimento de back-end"], "years": 1.5},
+        ],
     }
+    answer_book_data["experience"] = {"patterns": ["experiência com", "experience with", "experience working with"]}
     return AnswerBook.model_validate(answer_book_data)
 
 
@@ -155,6 +161,60 @@ class TestSkillYears:
         field = text_field("How many years of experience in the financial sector?")
 
         assert answerer.answer(field, application()) is None
+
+
+class TestYearsByArea:
+    def test_question_about_an_area_uses_the_declared_years(self, answerer):
+        field = text_field("How many years of professional software development experience do you have?")
+
+        assert answerer.answer(field, application(locale="en")).text == "2"
+
+    def test_the_most_specific_area_wins(self, answerer):
+        field = text_field("Há quantos anos você já usa Desenvolvimento de back-end no trabalho?")
+
+        assert answerer.answer(field, application()).text == "1.5"
+
+    def test_technology_of_the_glossary_wins_over_the_area(self, answerer):
+        field = text_field("Quantos anos de desenvolvimento com Docker?")
+
+        assert answerer.answer(field, application()).text == "1.5"
+
+    def test_question_without_technology_or_area_stays_unanswered(self, answerer):
+        field = text_field("How many years have you lived abroad?")
+
+        assert answerer.answer(field, application(locale="en")) is None
+
+
+class TestExperienceFromTheResume:
+    def test_yes_when_every_technology_is_in_the_resume(self, answerer):
+        field = choice_field("Do you have experience with Python and Docker?", "Yes", "No")
+
+        assert answerer.answer(field, application(locale="en")).text == "Yes"
+
+    def test_no_when_none_of_the_technologies_is_in_the_resume(self, answerer):
+        field = choice_field("Você tem experiência com Kubernetes?", "Sim", "Não")
+
+        assert answerer.answer(field, application()).text == "Não"
+
+    def test_mixed_technologies_stay_unanswered(self, answerer):
+        field = choice_field("Do you have experience with Python and Kubernetes?", "Yes", "No")
+
+        assert answerer.answer(field, application(locale="en")) is None
+
+    def test_question_without_known_technology_stays_unanswered(self, answerer):
+        field = choice_field("Do you have experience working with startups?", "Yes", "No")
+
+        assert answerer.answer(field, application(locale="en")) is None
+
+    def test_free_text_field_is_never_answered_with_yes_or_no(self, answerer):
+        field = text_field("Describe your experience with Python.", kind=FieldKind.LONG_TEXT)
+
+        assert answerer.answer(field, application(locale="en")) is None
+
+    def test_a_ready_answer_wins_even_when_it_is_null(self, answerer):
+        field = choice_field("Do you have experience with AWS in production?", "Yes", "No")
+
+        assert answerer.answer(field, application(locale="en")) is None
 
 
 class TestSalary:

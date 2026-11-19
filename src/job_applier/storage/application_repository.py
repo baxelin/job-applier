@@ -41,8 +41,10 @@ class ApplicationRepository(ABC):
         """
 
     @abstractmethod
-    def list_ready_for_submission(self) -> list[JobApplication]:
-        """Vagas simplificadas com CV a enviar: as que passaram no ensaio primeiro, depois as novas, por aderência."""
+    def list_ready_for_submission(self, retry_pending: bool = False) -> list[JobApplication]:
+        """Vagas simplificadas com CV a enviar: as que passaram no ensaio, as novas e, com retry_pending, as
+        pendentes de pergunta, nessa ordem e por aderência. Vagas com erro nunca entram: o erro pode ser um
+        envio sem confirmação, e repetir poderia mandar a mesma candidatura duas vezes."""
 
     @abstractmethod
     def count_applied_on(self, day: date) -> int:
@@ -133,18 +135,21 @@ class SqliteApplicationRepository(ApplicationRepository):
             ).fetchall()
         return [self._from_row(row) for row in rows]
 
-    def list_ready_for_submission(self) -> list[JobApplication]:
+    def list_ready_for_submission(self, retry_pending: bool = False) -> list[JobApplication]:
         with self._database.connect() as connection:
             rows = connection.execute(
                 """
                 SELECT * FROM job_applications
-                WHERE apply_type = :apply_type AND resume_path IS NOT NULL AND status IN (:rehearsed, :new_status)
-                ORDER BY status = :rehearsed DESC, fit_percentage DESC, id
+                WHERE apply_type = :apply_type AND resume_path IS NOT NULL
+                  AND (status IN (:rehearsed, :new_status) OR (:retry_pending AND status = :pending))
+                ORDER BY status = :rehearsed DESC, status = :new_status DESC, fit_percentage DESC, id
                 """,
                 {
                     "apply_type": ApplyType.EASY_APPLY.value,
                     "rehearsed": ApplicationStatus.REHEARSED.value,
                     "new_status": ApplicationStatus.CV_GENERATED.value,
+                    "pending": ApplicationStatus.UNKNOWN_QUESTION_PENDING.value,
+                    "retry_pending": retry_pending,
                 },
             ).fetchall()
         return [self._from_row(row) for row in rows]

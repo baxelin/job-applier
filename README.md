@@ -30,6 +30,7 @@ Rode `docker compose build` de novo sempre que o código mudar, porque o código
 | Ensaiar e repetir as vagas pendentes de pergunta ou com erro | `docker compose run --rm --service-ports app python -m job_applier ensaiar --repetir-pendentes` |
 | **Enviar** as candidaturas simplificadas | `docker compose run --rm --service-ports app python -m job_applier aplicar` |
 | Enviar abrindo no máximo N vagas | `docker compose run --rm --service-ports app python -m job_applier aplicar --max-vagas 5` |
+| Enviar e repetir as vagas pendentes de pergunta (depois de cadastrar respostas) | `docker compose run --rm --service-ports app python -m job_applier aplicar --repetir-pendentes` |
 | Gerar CVs a partir de arquivos `.txt` | `docker compose run --rm app python -m job_applier cv data/vagas` |
 | Recriar a planilha a partir do banco | `docker compose run --rm app python -m job_applier planilha` |
 | Rodar os testes | `docker compose run --rm app pytest` |

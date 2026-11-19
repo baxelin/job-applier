@@ -60,7 +60,7 @@ class CommandLine:
             case "ensaiar":
                 return self._rehearsal_command(parsed.max_jobs, parsed.retry_pending).run()
             case "aplicar":
-                return self._submission_command(parsed.max_jobs).run()
+                return self._submission_command(parsed.max_jobs, parsed.retry_pending).run()
             case _:
                 return Application().run()
 
@@ -91,6 +91,12 @@ class CommandLine:
             "aplicar", help="Envia as candidaturas simplificadas, até o limite diário de envios do config.json."
         )
         submission.add_argument("--max-vagas", dest="max_jobs", type=int, help="Abre no máximo N vagas.")
+        submission.add_argument(
+            "--repetir-pendentes",
+            dest="retry_pending",
+            action="store_true",
+            help="Depois das vagas novas, tenta de novo as pendentes de pergunta (nunca as com erro).",
+        )
         return parser
 
     def _generate_resumes_command(self) -> GenerateResumesCommand:
@@ -128,11 +134,14 @@ class CommandLine:
             lambda parts, settings: EasyApplyRehearsal(*parts, max_jobs=max_jobs, retry_pending=retry_pending),
         )
 
-    def _submission_command(self, max_jobs: int | None) -> ScanCommand[LinkedInBrowser]:
+    def _submission_command(self, max_jobs: int | None, retry_pending: bool) -> ScanCommand[LinkedInBrowser]:
         return self._easy_apply_command(
             "envios",
             lambda parts, settings: EasyApplySubmission(
-                *parts, max_jobs=max_jobs, daily_limit=settings.daily_submission_limit
+                *parts,
+                max_jobs=max_jobs,
+                daily_limit=settings.daily_submission_limit,
+                retry_pending=retry_pending,
             ),
         )
 
