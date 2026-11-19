@@ -7,6 +7,7 @@ from pathlib import Path
 
 from job_applier.linkedin.easy_apply_filler import EasyApplyFiller, FillOutcome, FillStatus
 from job_applier.linkedin.easy_apply_form import EasyApplyUnavailableError
+from job_applier.linkedin.job_page_parser import JobPageParser
 from job_applier.linkedin.job_scanner import ScanResult
 from job_applier.linkedin.linkedin_browser import ApplicationBrowser
 from job_applier.linkedin.pacer import Pacer
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 class _Tally(StrEnum):
     READY = "prontas para envio"
     PENDING = "com pergunta sem resposta"
+    CLOSED = "encerradas"
     UNAVAILABLE = "indisponíveis"
     FAILED = "com erro"
 
@@ -40,7 +42,11 @@ class EasyApplyRehearsal:
     Cada vaga deixa prints e um respostas.txt em data/ensaios, e o modal é sempre descartado. Perguntas
     sem resposta vão para a aba Perguntas e a vaga fica pendente. Para na hora ao primeiro sinal de
     captcha, logout ou bloqueio, ou quando várias vagas seguidas falharem (provável mudança de layout).
+    Vaga encerrada é ignorada sem contar como falha: vagas antigas na fila encerram com frequência, e isso
+    não diz nada sobre o layout.
     """
+
+    _CLOSED_REASON = "Vaga encerrada: não aceita mais candidaturas."
 
     def __init__(
         self,
@@ -54,6 +60,7 @@ class EasyApplyRehearsal:
         max_consecutive_failures: int,
         max_jobs: int | None = None,
         now: Callable[[], datetime] = datetime.now,
+        page_parser: JobPageParser | None = None,
     ) -> None:
         self._browser = browser
         self._filler = filler
@@ -65,6 +72,7 @@ class EasyApplyRehearsal:
         self._max_consecutive_failures = max_consecutive_failures
         self._max_jobs = max_jobs
         self._now = now
+        self._page_parser = page_parser or JobPageParser()
         self._guard = SessionGuard()
         self._tally: Counter[_Tally] = Counter()
         self._consecutive_failures = 0
@@ -90,7 +98,11 @@ class EasyApplyRehearsal:
         job_id = JobPosting.id_from_url(application.url or "")
         logger.info("Ensaio: %s - %s", application.company, application.title)
         self._pacer.between_actions()
-        self._guard.check(self._browser.open_job(job_id))
+        page = self._browser.open_job(job_id)
+        self._guard.check(page)
+        if self._page_parser.is_closed(page.text):
+            self._handle_closed(application)
+            return
         try:
             form = self._browser.open_application_form()
         except EasyApplyUnavailableError as error:
@@ -107,6 +119,11 @@ class EasyApplyRehearsal:
     def _evidence_for(self, application: JobApplication) -> RehearsalEvidence:
         resume_name = Path(application.resume_path or application.job_key).stem
         return RehearsalEvidence(self._evidence_dir / f"{self._now():%Y-%m-%d_%H-%M-%S}_{resume_name}", application)
+
+    def _handle_closed(self, application: JobApplication) -> None:
+        logger.info("%s - %s: %s", application.company, application.title, self._CLOSED_REASON)
+        self._tracker.record_unavailable(application, self._CLOSED_REASON)
+        self._tally[_Tally.CLOSED] += 1
 
     def _handle_unavailable(self, application: JobApplication, job_id: str, reason: str) -> None:
         snapshot = self._browser.save_snapshot(f"ensaio-{job_id}")

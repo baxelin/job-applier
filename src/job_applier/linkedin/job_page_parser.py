@@ -173,9 +173,14 @@ class JobPageParser:
         first_part = self._SEPARATOR.split(top_card)[0].strip() if top_card else ""
         return first_part or None
 
+    def is_closed(self, page_text: str) -> bool:
+        """A vaga não aceita mais candidaturas, pelo aviso que o LinkedIn mostra no topo."""
+        normalized = TextNormalizer.normalize(page_text)
+        return any(sign in normalized for sign in self._CLOSED_SIGNS)
+
     def _apply_type(self, soup: BeautifulSoup) -> ApplyType:
         page_text = TextNormalizer.normalize(soup.get_text(" "))
-        if any(sign in page_text for sign in self._CLOSED_SIGNS):
+        if self.is_closed(page_text):
             return ApplyType.CLOSED
 
         labels = [

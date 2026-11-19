@@ -30,9 +30,15 @@ def job_key(job_id: str) -> str:
 
 
 class FakeApplicationBrowser(ApplicationBrowser):
-    def __init__(self, forms: dict[str, ApplicationForm | Exception], job_url: str | None = None) -> None:
+    def __init__(
+        self,
+        forms: dict[str, ApplicationForm | Exception],
+        job_url: str | None = None,
+        closed: frozenset[str] = frozenset(),
+    ) -> None:
         self._forms = forms
         self._job_url = job_url
+        self._closed = closed
         self._current = ""
         self.opened_jobs: list[str] = []
         self.snapshots: list[str] = []
@@ -40,7 +46,8 @@ class FakeApplicationBrowser(ApplicationBrowser):
     def open_job(self, linkedin_id: str) -> PageSnapshot:
         self._current = linkedin_id
         self.opened_jobs.append(linkedin_id)
-        return PageSnapshot(url=self._job_url or JobPosting.url_for(linkedin_id), html="", text="Vaga " * 1000)
+        notice = "Não aceita mais candidaturas " if linkedin_id in self._closed else ""
+        return PageSnapshot(url=self._job_url or JobPosting.url_for(linkedin_id), html="", text=notice + "Vaga " * 1000)
 
     def open_application_form(self) -> ApplicationForm:
         form = self._forms[self._current]
@@ -151,6 +158,19 @@ class TestEasyApplyRehearsal:
 
         assert status_of(applications, "1") is ApplicationStatus.SKIPPED
         assert browser.snapshots == ["ensaio-1"]
+
+    def test_closed_job_is_skipped_without_counting_as_a_failure(self, make_rehearsal, save_job, applications):
+        for job_id, fit in (("1", 90), ("2", 80), ("3", 70)):
+            save_job(job_id, fit=fit)
+        browser = FakeApplicationBrowser({"3": FakeApplicationForm([REVIEW])}, closed=frozenset({"1", "2"}))
+
+        result = make_rehearsal(browser, max_failures=2).run()
+
+        assert result.status is ScanStatus.COMPLETED
+        assert "2 encerradas" in result.reason
+        assert status_of(applications, "1") is ApplicationStatus.SKIPPED
+        assert status_of(applications, "3") is ApplicationStatus.REHEARSED
+        assert browser.snapshots == []
 
     def test_stops_after_consecutive_failures(self, make_rehearsal, save_job):
         for job_id, fit in (("1", 90), ("2", 80), ("3", 70)):

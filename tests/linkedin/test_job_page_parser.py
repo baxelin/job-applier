@@ -162,3 +162,12 @@ class TestJobPageParser:
     def test_reports_missing_required_fields(self):
         with pytest.raises(JobExtractionError, match="empresa, descrição"):
             parse("<html><body><h1>Só o título</h1></body></html>")
+
+
+class TestClosedNotice:
+    @pytest.mark.parametrize("text", ["Remoto · Não aceita mais candidaturas", "Remote · No longer accepting applications"])
+    def test_recognizes_the_closed_notice(self, text):
+        assert JobPageParser().is_closed(text)
+
+    def test_open_job_is_not_closed(self):
+        assert not JobPageParser().is_closed("Remoto · Candidatura simplificada")
