@@ -1,10 +1,10 @@
 {
   "daily_application_limit": 1000,
-  "delay_between_actions_seconds": { "minimum": 2, "maximum": 6 },
-  "delay_between_applications_seconds": { "minimum": 60, "maximum": 180 },
+  "delay_between_actions_seconds": { "minimum": 1.5, "maximum": 4 },
+  "delay_between_applications_seconds": { "minimum": 30, "maximum": 90 },
   "long_pause": {
-    "every_applications": 5,
-    "minutes": { "minimum": 10, "maximum": 25 }
+    "every_applications": 10,
+    "minutes": { "minimum": 5, "maximum": 15 }
   },
   "filters": {
     "posted_within_hours": 168,
