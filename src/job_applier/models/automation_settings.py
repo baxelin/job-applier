@@ -45,6 +45,7 @@ class JobFilters(StrictModel):
     forbidden_title_words: list[NonEmptyText] = []
     blocked_companies: list[NonEmptyText] = []
     posted_within_hours: int | None = Field(default=None, ge=1)
+    minimum_fit_percentage: int = Field(default=0, ge=0, le=100)
 
 
 class SearchQuery(StrictModel):

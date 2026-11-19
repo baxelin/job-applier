@@ -58,6 +58,18 @@ def easy_apply(job_key: str, fit: int = 50, status: ApplicationStatus = Applicat
     )
 
 
+class TestHasCompanyAndTitle:
+    def test_finds_the_same_job_ignoring_case_accents_and_spaces(self, applications):
+        applications.save(application(company="INDI Staffing", title="Junior .NET Developer - Remote Work"))
+
+        assert applications.has_company_and_title("indi staffing", "Junior  .NET developer - remote work")
+
+    def test_same_title_in_another_company_is_a_different_job(self, applications):
+        applications.save(application(company="Empresa X", title="Desenvolvedor Júnior"))
+
+        assert not applications.has_company_and_title("Empresa Y", "Desenvolvedor Júnior")
+
+
 class TestListReadyForEasyApply:
     def test_lists_only_easy_apply_jobs_with_resume(self, applications):
         applications.save(easy_apply("simplificada"))

@@ -41,7 +41,9 @@ class JobScanner:
 
     Empresas bloqueadas (e títulos proibidos, quando o card mostra o título) são descartadas já na
     lista de resultados, sem abrir a vaga. O que só aparece depois de abrir (título proibido, suporte,
-    vaga encerrada, empresa bloqueada não detectada no card) é registrado como ignorado, sem CV.
+    vaga encerrada, empresa bloqueada não detectada no card, aderência abaixo do mínimo) é registrado
+    como ignorado, sem CV. Também é ignorada a vaga repetida, com mesma empresa e título de outra já
+    registrada: anunciantes de vagas fantasma republicam o mesmo título em várias cidades.
     Vagas com candidatura no site da empresa ganham CV e ficam pendentes de aplicação manual.
 
     Para na hora ao primeiro sinal de captcha, logout ou bloqueio, ao atingir o limite diário,
@@ -173,14 +175,19 @@ class JobScanner:
         self._jobs_recorded += 1
 
     def _skip_reason(self, posting: JobPosting, evaluation: JobEvaluation) -> str | None:
-        if company := self._company_filter.first_match_in(posting.description.company):
+        description = posting.description
+        if company := self._company_filter.first_match_in(description.company):
             return f"Empresa bloqueada ({company})"
-        if word := self._title_filter.first_match_in(posting.description.title):
+        if word := self._title_filter.first_match_in(description.title):
             return f"Título contém '{word}'"
         if evaluation.analysis.is_support_role:
             return "Vaga de suporte"
         if posting.apply_type is ApplyType.CLOSED:
             return "Vaga não aceita mais candidaturas"
+        if self._applications.has_company_and_title(description.company, description.title):
+            return "Vaga repetida: mesma empresa e título de outra já registrada"
+        if (fit := evaluation.fit.percentage) < (minimum := self._settings.filters.minimum_fit_percentage):
+            return f"Aderência de {fit}% abaixo do mínimo de {minimum}%"
         return None
 
     def _ensure_can_continue(self) -> None:

@@ -3,6 +3,7 @@ import sqlite3
 from abc import ABC, abstractmethod
 from datetime import date, datetime
 
+from job_applier.matching.text_normalizer import TextNormalizer
 from job_applier.models.job_application import ApplicationStatus, JobApplication
 from job_applier.models.job_posting import ApplyType
 from job_applier.storage.database import Database
@@ -18,6 +19,10 @@ class ApplicationRepository(ABC):
     @abstractmethod
     def exists(self, job_key: str) -> bool:
         """Se a vaga já foi processada antes."""
+
+    @abstractmethod
+    def has_company_and_title(self, company: str, title: str) -> bool:
+        """Se já existe vaga com a mesma empresa e o mesmo título (ignorando maiúsculas, acentos e espaços)."""
 
     @abstractmethod
     def count_processed_on(self, day: date) -> int:
@@ -71,6 +76,16 @@ class SqliteApplicationRepository(ApplicationRepository):
         with self._database.connect() as connection:
             row = connection.execute("SELECT 1 FROM job_applications WHERE job_key = ?", (job_key,)).fetchone()
         return row is not None
+
+    def has_company_and_title(self, company: str, title: str) -> bool:
+        wanted = self._comparable(company, title)
+        with self._database.connect() as connection:
+            rows = connection.execute("SELECT company, title FROM job_applications").fetchall()
+        return any(self._comparable(row["company"], row["title"]) == wanted for row in rows)
+
+    @staticmethod
+    def _comparable(company: str, title: str) -> tuple[str, str]:
+        return tuple(" ".join(TextNormalizer.normalize(text).split()) for text in (company, title))
 
     def count_processed_on(self, day: date) -> int:
         with self._database.connect() as connection:

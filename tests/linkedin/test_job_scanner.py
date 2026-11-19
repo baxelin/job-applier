@@ -119,6 +119,30 @@ class TestJobScanner:
         assert notes[JobPosting.url_for("1")] == (ApplicationStatus.SKIPPED, "Título contém 'sênior'", None)
         assert notes[JobPosting.url_for("2")] == (ApplicationStatus.SKIPPED, "Vaga de suporte", None)
 
+    def test_skips_a_repost_with_the_same_company_and_title(self, make_scanner, applications):
+        browser = FakeBrowser([["1", "2"]], {"1": dev_job(), "2": dev_job("desenvolvedor  python júnior")})
+
+        make_scanner(browser).run()
+
+        notes = {item.url: (item.status, item.notes, item.resume_path) for item in applications.list_all()}
+        assert notes[JobPosting.url_for("1")][0] is ApplicationStatus.CV_GENERATED
+        assert notes[JobPosting.url_for("2")] == (
+            ApplicationStatus.SKIPPED,
+            "Vaga repetida: mesma empresa e título de outra já registrada",
+            None,
+        )
+
+    def test_skips_jobs_below_the_minimum_fit(self, make_scanner, applications, example_base_data):
+        filters = example_base_data.settings.filters.model_copy(update={"minimum_fit_percentage": 60})
+        browser = FakeBrowser([["1"]], {"1": job_page(description="<p>Python, Java e Kotlin no backend.</p>")})
+
+        make_scanner(browser, filters=filters).run()
+
+        [recorded] = applications.list_all()
+        assert recorded.status is ApplicationStatus.SKIPPED
+        assert recorded.notes.startswith("Aderência de ") and recorded.notes.endswith("abaixo do mínimo de 60%")
+        assert recorded.resume_path is None
+
     def test_discards_blocked_companies_from_the_results_list_without_opening(self, make_scanner, applications):
         browser = FakeBrowser(
             [[("1", "Desenvolvedor Júnior", "BairesDev"), ("2", "Desenvolvedor Júnior", "Empresa Boa")]],
