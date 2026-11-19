@@ -143,6 +143,24 @@ class TestJobScanner:
         assert recorded.notes.startswith("Aderência de ") and recorded.notes.endswith("abaixo do mínimo de 60%")
         assert recorded.resume_path is None
 
+    def test_jobs_citing_few_technologies_are_not_filtered_by_fit(self, make_scanner, applications, example_base_data):
+        filters = example_base_data.settings.filters.model_copy(
+            update={"minimum_fit_percentage": 60, "minimum_terms_for_fit": 3}
+        )
+        browser = FakeBrowser(
+            [["1", "2"]],
+            {
+                "1": job_page(description="<p>Estágio em desenvolvimento com Java.</p>"),
+                "2": job_page(title="Desenvolvedor Back-end Júnior", description="<p>Java, Kotlin e Go.</p>"),
+            },
+        )
+
+        make_scanner(browser, filters=filters).run()
+
+        status = {item.url: item.status for item in applications.list_all()}
+        assert status[JobPosting.url_for("1")] is ApplicationStatus.CV_GENERATED
+        assert status[JobPosting.url_for("2")] is ApplicationStatus.SKIPPED
+
     def test_discards_blocked_companies_from_the_results_list_without_opening(self, make_scanner, applications):
         browser = FakeBrowser(
             [[("1", "Desenvolvedor Júnior", "BairesDev"), ("2", "Desenvolvedor Júnior", "Empresa Boa")]],

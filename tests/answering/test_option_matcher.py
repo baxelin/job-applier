@@ -37,6 +37,20 @@ class TestOptionMatcher:
     def test_does_not_match_part_of_a_word(self, matcher):
         assert matcher.pick(options("Pós"), ["Compostos"]) is None
 
+    def test_long_options_are_matched_by_their_beginning(self, matcher):
+        levels = options(
+            "B1 – Intermediate: I can understand the main points on familiar topics.",
+            "B2 – Upper Intermediate: I can speak fluently enough to talk with native speakers.",
+            "C1 – Advanced: I can express myself fluently and spontaneously.",
+        )
+
+        answer = matcher.pick(levels, ["Upper-intermediate (B2 – Cambridge certificate)"])
+
+        assert answer.label.startswith("B2")
+
+    def test_the_beginning_of_a_short_option_is_not_used(self, matcher):
+        assert matcher.pick(options("Python", "Java"), ["Python – Java"]) is None
+
     def test_does_not_guess_between_two_options(self, matcher):
         assert matcher.pick(options("Remoto", "Híbrido"), ["Remoto ou híbrido"]) is None
 

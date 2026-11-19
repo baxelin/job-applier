@@ -188,9 +188,15 @@ class JobScanner:
             return "Vaga não aceita mais candidaturas"
         if self._applications.has_company_and_title(description.company, description.title):
             return "Vaga repetida: mesma empresa e título de outra já registrada"
-        if (fit := evaluation.fit.percentage) < (minimum := self._settings.filters.minimum_fit_percentage):
-            return f"Aderência de {fit}% abaixo do mínimo de {minimum}%"
-        return None
+        return self._low_fit_reason(evaluation)
+
+    def _low_fit_reason(self, evaluation: JobEvaluation) -> str | None:
+        """Com poucas tecnologias citadas (comum em estágio), a aderência vira 0% ou 100% por acaso: não filtra."""
+        filters = self._settings.filters
+        fit = evaluation.fit
+        if fit.term_count < filters.minimum_terms_for_fit or fit.percentage >= filters.minimum_fit_percentage:
+            return None
+        return f"Aderência de {fit.percentage}% abaixo do mínimo de {filters.minimum_fit_percentage}%"
 
     def _ensure_can_continue(self) -> None:
         if self._resumes_left_today <= 0:

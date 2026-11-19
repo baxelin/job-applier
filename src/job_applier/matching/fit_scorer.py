@@ -13,6 +13,10 @@ class FitScore:
     matched_terms: tuple[str, ...]
     missing_terms: tuple[str, ...]
 
+    @property
+    def term_count(self) -> int:
+        return len(self.matched_terms) + len(self.missing_terms)
+
 
 class FitScorer:
     """Compara os termos da vaga com as skills e as tags técnicas do currículo."""

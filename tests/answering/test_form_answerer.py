@@ -213,6 +213,11 @@ class TestExperienceFromTheResume:
 
         assert answerer.answer(field, application(locale="en")) is None
 
+    def test_question_about_a_declared_area_is_yes(self, answerer):
+        field = choice_field("Você já teve experiência com desenvolvimento de software?", "Yes", "No")
+
+        assert answerer.answer(field, application()).text == "Yes"
+
     def test_question_without_known_technology_stays_unanswered(self, answerer):
         field = choice_field("Do you have experience working with startups?", "Yes", "No")
 

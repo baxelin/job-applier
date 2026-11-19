@@ -51,6 +51,7 @@ class JobFilters(StrictModel):
     blocked_companies: list[NonEmptyText] = []
     posted_within_hours: int | None = Field(default=None, ge=1)
     minimum_fit_percentage: int = Field(default=0, ge=0, le=100)
+    minimum_terms_for_fit: int = Field(default=0, ge=0)
     sort_by: SearchOrder = SearchOrder.RECENT
 
 

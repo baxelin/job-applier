@@ -5,6 +5,7 @@
   "filters": {
     "posted_within_hours": 720,
     "minimum_fit_percentage": 30,
+    "minimum_terms_for_fit": 3,
     "sort_by": "relevance",
     "workplace_types": ["remote", "hybrid", "on_site"],
     "forbidden_title_words": [
@@ -41,6 +42,14 @@
       "pcd",
       "pessoas com deficiência",
       "pessoa com deficiência",
+      "pessoas negras",
+      "pessoa negra",
+      "pessoas pretas",
+      "lgbt",
+      "lgbtqia",
+      "lgbtqiapn",
+      "sap",
+      "abap",
       "field service"
     ],
     "blocked_companies": ["BairesDev", "Jobbol", "INDI Staffing Services", "Jobgether"]

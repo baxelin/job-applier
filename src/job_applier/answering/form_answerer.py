@@ -6,7 +6,7 @@ from job_applier.answering.salary_calculator import SalaryCalculator
 from job_applier.answering.skill_experience import SkillExperience
 from job_applier.matching.keyword_extractor import KeywordExtractor
 from job_applier.matching.word_filter import WordFilter
-from job_applier.models.answer_book import Answer, AnswerBook
+from job_applier.models.answer_book import Answer, AnswerBook, YearsArea
 from job_applier.models.base import Locale
 from job_applier.models.form_field import FieldAnswer, FieldKind, FormField
 from job_applier.models.glossary import Glossary
@@ -81,14 +81,19 @@ class FormAnswerer:
         return Locale.EN if locale is Locale.PT else Locale.PT
 
     def _experience_answer(self, field: FormField, locale: Locale) -> list[str]:
-        """Sim se todas as tecnologias citadas são conhecidas (CV ou derivadas dele), não se nenhuma é."""
+        """Sim se todas as tecnologias citadas são conhecidas (CV ou derivadas dele), não se nenhuma é.
+
+        Sem tecnologia do glossário, vale a área declarada em skill_years.areas ("desenvolvimento de software"):
+        sim quando ela tem anos de experiência.
+        """
         if field.kind not in self._YES_OR_NO_KINDS or self._experience_filter is None:
             return []
         if not self._experience_filter.first_match_in(field.question):
             return []
         terms = self._extractor.extract(field.question)
         if not terms:
-            return []
+            area = self._area_in(field.question)
+            return [self._YES[locale], self._YES[self._other(locale)]] if area and area.years > 0 else []
         known = [self._skills.knows(term) for term in terms]
         if all(known):
             words = self._YES
@@ -108,14 +113,17 @@ class FormAnswerer:
         terms = self._extractor.extract(question)
         if terms:
             return [f"{min(self._skills.years(term) for term in terms):g}"]
+        area = self._area_in(question)
+        return [f"{area.years:g}"] if area else []
+
+    def _area_in(self, question: str) -> YearsArea | None:
+        """A área declarada cujo padrão aparece na pergunta; vence o padrão mais longo."""
         matches = [
             (len(pattern), area)
             for area, patterns in self._area_filters
             if (pattern := patterns.first_match_in(question))
         ]
-        if not matches:
-            return []
-        return [f"{max(matches, key=lambda match: match[0])[1].years:g}"]
+        return max(matches, key=lambda match: match[0], default=(0, None))[1]
 
     def _best_answer(self, question: str) -> Answer | None:
         matches = [
